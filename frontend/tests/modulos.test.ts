@@ -1,0 +1,26 @@
+import { describe, expect, it } from 'vitest'
+import { modulos } from '@/modules'
+
+describe('registro de módulos', () => {
+  it('descubre los módulos implementados, ordenados', () => {
+    expect(modulos.map((m) => m.nombre)).toEqual(['academico', 'horarios', 'rrhh', 'administracion'])
+  })
+
+  it('la administración es solo para administradores', () => {
+    expect(modulos.filter((m) => m.soloAdmin).map((m) => m.nombre)).toEqual(['administracion'])
+  })
+
+  it('estructura académica expone orientaciones, años, divisiones y materias', () => {
+    const academico = modulos.find((m) => m.nombre === 'academico')!
+    expect(academico.rutas.map((r) => r.path)).toEqual(['orientaciones', 'anios', 'divisiones', 'materias'])
+  })
+
+  it('RR. HH. expone personal, designaciones y cursos/materias de docentes', () => {
+    const rrhh = modulos.find((m) => m.nombre === 'rrhh')!
+    expect(rrhh.rutas.map((r) => r.path)).toEqual(['personal', 'designaciones', 'asignaciones'])
+  })
+
+  it('cada ruta tiene componente', () => {
+    for (const m of modulos) for (const r of m.rutas) expect(r.component).toBeTruthy()
+  })
+})

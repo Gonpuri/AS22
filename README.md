@@ -1,0 +1,61 @@
+# Sistema Escolar
+
+Aplicación web modular para una escuela secundaria de la Provincia de Buenos Aires.
+
+| Capa | Tecnología |
+|---|---|
+| API | Django REST Framework (estructura académica, administración, RR. HH.) + FastAPI (horarios), servidos por una sola app ASGI |
+| Frontend | Vue 3 + TypeScript + Vuetify (Material Design para Vue) |
+| Base de datos | PostgreSQL en Render (SQLite local si no hay `DATABASE_URL`) |
+| Despliegue | API en Render (`render.yaml`), frontend en Vercel (`frontend/vercel.json`) |
+
+## Módulos
+
+| Etapa | Módulo | Contenido |
+|---|---|---|
+| 1 | `academico` | Orientaciones, años, divisiones y materias (asociadas a años y orientaciones) |
+| 1 | `core` | Administración del sistema: login por token, usuarios (alta, edición, baja, activar/desactivar, rol administrador) |
+| 2 | `horarios` | Bloques horarios: división + materia + día + hora de inicio/fin |
+| 3 | `rrhh` | Personal y sus designaciones (categoría + turno): preceptores, equipo directivo, profesores, EMATPs y otros. Los docentes tienen cursos y materias asignados |
+
+### Reglas de negocio
+- Una **persona** puede tener varias **designaciones** (categoría + turno: mañana, tarde o vespertino), p. ej. preceptor a la mañana y profesor a la tarde. Cada designación tiene su **situación de revista** (titular, titular interino, suplente o provisional). No se repite la misma categoría en el mismo turno.
+- Una designación de **profesor o EMATP** puede tener varias **asignaciones** (división + materia): distintos cursos y distintas materias. La materia debe corresponder a la división.
+- Una **división** pertenece a un año y, opcionalmente, a una orientación.
+- Las **materias de una división** son las asociadas a su año y, si la materia está asociada a orientaciones, solo si incluye la de la división. Una materia sin orientaciones vale para todas las del año.
+- Un **bloque horario** exige: materia de la división, fin posterior al inicio y sin superposición con otro bloque de la misma división el mismo día (lunes a viernes).
+- No se puede eliminar un año, orientación, división o materia con registros que dependan de ellos (HTTP 409).
+- Cualquier usuario autenticado consulta; solo los administradores (`is_staff`) modifican.
+
+### Agregar un módulo nuevo (p. ej. Alumnos)
+1. Backend: crear `backend/apps/alumnos/` (modelos, migraciones), con `urls.py` (DRF) y/o `api.py` (FastAPI, variable `router`), y agregar `"alumnos"` a `MODULOS` en `config/settings.py`. Las rutas se publican solas en `/api/alumnos/`.
+2. Frontend: crear `frontend/src/modules/alumnos/index.ts` exportando un `ModuloFrontend` (ver `modules/types.ts`). El menú y el router lo descubren solos.
+
+## Desarrollo local
+
+### Backend
+```powershell
+cd backend
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+python manage.py migrate
+python manage.py createsuperuser     # el primer administrador
+uvicorn config.asgi:app --reload     # http://localhost:8000  (docs de FastAPI en /api/docs)
+pytest                               # pruebas
+```
+Variables (ver `backend/.env.example`): `DATABASE_URL`, `DJANGO_SECRET_KEY`, `DJANGO_ALLOWED_HOSTS`, `CORS_ALLOWED_ORIGINS`, `DJANGO_DEBUG`.
+
+### Frontend
+```powershell
+cd frontend
+npm install
+npm run dev      # http://localhost:5173
+npm test         # pruebas (Vitest)
+npm run build    # verifica tipos y genera dist/
+```
+Variable: `VITE_API_URL` (ver `frontend/.env.example`).
+
+## Despliegue
+1. **Render**: crear un Blueprint desde `render.yaml` (base PostgreSQL + servicio web). Completar `CORS_ALLOWED_ORIGINS` con la URL de Vercel y ajustar `DJANGO_ALLOWED_HOSTS` al dominio real. Crear el primer administrador con `python manage.py createsuperuser` desde la shell del servicio.
+2. **Vercel**: importar el repositorio con *Root Directory* `frontend` y definir `VITE_API_URL` con la URL de la API en Render.
