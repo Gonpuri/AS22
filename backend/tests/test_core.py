@@ -23,7 +23,7 @@ def test_yo_requiere_autenticacion(admin_client):
 
 def test_modulos_registrados(common_client):
     nombres = [m["nombre"] for m in common_client.get("/api/modulos/").data]
-    assert nombres == ["academico", "horarios", "rrhh"]
+    assert nombres == ["academico", "horarios", "rrhh", "consulta_docente"]
 
 
 def test_usuarios_solo_administrador(common_client, admin_client):

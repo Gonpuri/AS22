@@ -17,6 +17,7 @@ Aplicación web modular para una escuela secundaria de la Provincia de Buenos Ai
 | 1 | `core` | Administración del sistema: login por token, usuarios (alta, edición, baja, activar/desactivar, rol administrador) |
 | 2 | `horarios` | Bloques horarios (división + materia + día + hora de inicio/fin) y vista de grilla por curso, con el docente de cada materia al pasar el puntero |
 | 3 | `rrhh` | Personal y sus designaciones (categoría + turno): preceptores, equipo directivo, profesores, EMATPs y otros. Los docentes tienen cursos y materias asignados |
+| 4 | `consulta_docente` | Consulta por CUIL y fechas (un día o un intervalo): indica si el docente tiene clases y en qué cursos, materias y horarios |
 
 ### Reglas de negocio
 - Una **persona** puede tener varias **designaciones** (categoría + turno: mañana, tarde o vespertino), p. ej. preceptor a la mañana y profesor a la tarde. Cada designación tiene su **situación de revista** (titular, titular interino, suplente o provisional). No se repite la misma categoría en el mismo turno.
@@ -25,6 +26,7 @@ Aplicación web modular para una escuela secundaria de la Provincia de Buenos Ai
 - Las **materias de una división** son las asociadas a su año y, si la materia está asociada a orientaciones, solo si incluye la de la división. Una materia sin orientaciones vale para todas las del año.
 - Un **bloque horario** exige: materia de la división, fin posterior al inicio y sin superposición con otro bloque de la misma división el mismo día (lunes a viernes).
 - No se puede eliminar un año, orientación, división o materia con registros que dependan de ellos (HTTP 409).
+- La **consulta de docentes** cruza las asignaciones del docente (curso + materia) con los bloques horarios de ese curso, según el día de la semana de cada fecha. No tiene en cuenta feriados, asuetos ni licencias. Si titular y suplente están asignados a la misma materia de un curso, ambos figuran con esos bloques. Intervalo máximo: 366 días.
 - Cualquier usuario autenticado consulta; solo los administradores (`is_staff`) modifican.
 
 ### Agregar un módulo nuevo (p. ej. Alumnos)

@@ -18,7 +18,7 @@ if _render_host:
 
 # Módulos funcionales del sistema. Para sumar uno nuevo (p. ej. "alumnos") basta con crear
 # apps/<nombre>/ y agregarlo acá: ver apps/core/modulos.py para el contrato.
-MODULOS = ["academico", "horarios", "rrhh"]
+MODULOS = ["academico", "horarios", "rrhh", "consulta_docente"]
 
 INSTALLED_APPS = [
     "django.contrib.admin",
