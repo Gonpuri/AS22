@@ -7,7 +7,7 @@ Aplicación web modular para una escuela secundaria de la Provincia de Buenos Ai
 | API | Django REST Framework (estructura académica, administración, RR. HH.) + FastAPI (horarios), servidos por una sola app ASGI |
 | Frontend | Vue 3 + TypeScript + Vuetify (Material Design para Vue) |
 | Base de datos | PostgreSQL en Render (SQLite local si no hay `DATABASE_URL`) |
-| Despliegue | Base en Render (`render.yaml`), API en Koyeb (`backend/Dockerfile`), frontend en Vercel (`frontend/vercel.json`) |
+| Despliegue | Base y API en Render (`render.yaml`), frontend en Vercel (`frontend/vercel.json`) |
 
 ## Módulos
 
@@ -57,4 +57,4 @@ npm run build    # verifica tipos y genera dist/
 Variable: `VITE_API_URL` (ver `frontend/.env.example`).
 
 ## Despliegue
-Paso a paso completo en [DESPLIEGUE.txt](DESPLIEGUE.txt): base PostgreSQL en Render, API en Koyeb (se construye con `backend/Dockerfile`, directorio `backend`) y frontend en Vercel (directorio `frontend`).
+Paso a paso completo en [DESPLIEGUE.txt](DESPLIEGUE.txt): base PostgreSQL y API en Render (`render.yaml`) y frontend en Vercel (directorio `frontend`).

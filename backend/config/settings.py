@@ -9,6 +9,13 @@ SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "dev-insecure-key-cambiar-en-pr
 DEBUG = os.environ.get("DJANGO_DEBUG", "0") == "1"
 ALLOWED_HOSTS = [h for h in os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1,testserver").split(",") if h]
 
+# Render define RENDER_EXTERNAL_HOSTNAME en los servicios web: se habilita solo ese dominio.
+_render_host = os.environ.get("RENDER_EXTERNAL_HOSTNAME")
+if _render_host:
+    ALLOWED_HOSTS.append(_render_host)
+    CSRF_TRUSTED_ORIGINS = [f"https://{_render_host}"]
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
 # Módulos funcionales del sistema. Para sumar uno nuevo (p. ej. "alumnos") basta con crear
 # apps/<nombre>/ y agregarlo acá: ver apps/core/modulos.py para el contrato.
 MODULOS = ["academico", "horarios", "rrhh"]

@@ -2,152 +2,141 @@ PASO A PASO PARA DESPLEGAR EL SISTEMA ESCOLAR (AS22)
 ====================================================
 
 Arquitectura de producción:
-  - Base de datos PostgreSQL ........ Render
-  - API (Django REST Framework + FastAPI, una sola app ASGI) ... Koyeb
+  - Base de datos PostgreSQL ................ Render
+  - API (Django REST Framework + FastAPI) ... Render   (una sola app ASGI)
   - Frontend (Vue + TypeScript + Vuetify) ... Vercel
 
-Repositorio: https://github.com/Gonpuri/AS22  (privado, rama main)
+Repositorio: https://github.com/Gonpuri/AS22   (privado, rama main)
 
 Orden obligatorio:
-  1) Base de datos en Render   2) API en Koyeb   3) Frontend en Vercel
-  4) Volver a Koyeb para habilitar el origen del frontend (CORS)
-  5) Crear el administrador   6) Verificar
+  1) Render (base + API)   2) Vercel (frontend)   3) Volver a Render para habilitar
+  el frontend (CORS)   4) Crear el administrador   5) Verificar
+
+Archivos de configuración que ya están en el repositorio (no hay que crearlos):
+  render.yaml ............ base de datos + servicio web de la API
+  frontend/vercel.json ... build del frontend y reescritura de rutas (SPA)
 
 
 -------------------------------------------------------------------------------
-1. BASE DE DATOS POSTGRESQL EN RENDER
+0. REQUISITOS
 -------------------------------------------------------------------------------
-  1.1  https://dashboard.render.com -> "New +" -> "Blueprint" -> elegir el repositorio
-       AS22. Render lee render.yaml y crea solo la base "escuela-db".
-       (Alternativa manual: "New +" -> "PostgreSQL", nombre escuela-db, base "escuela",
-       usuario "escuela", plan Free.)
-
-  1.2  Cuando la base figure "Available", abrirla -> "Connections" -> copiar la
-       "External Database URL" (empieza con postgresql://...).
-       IMPORTANTE: Koyeb está fuera de Render, así que NO sirve la "Internal Database URL".
-
-  1.3  Agregar al final de esa URL el parámetro de seguridad:
-           ?sslmode=require
-       Ejemplo:
-           postgresql://escuela:CLAVE@dpg-xxxx.oregon-postgres.render.com/escuela?sslmode=require
-
-       Esta URL contiene la contraseña de la base: tratarla como secreta (no subirla a
-       GitHub, no pegarla en chats ni capturas). Se usa en el paso 2.4 y en el paso 5.
-
-  Nota: la base gratuita de Render tiene vencimiento y límites; verificar las condiciones
-  vigentes en render.com/pricing y pasar a un plan pago si el uso va a ser permanente.
+  - Cuentas en GitHub, Render (render.com) y Vercel (vercel.com). En Render y Vercel
+    se puede ingresar con la cuenta de GitHub.
+  - Como el repositorio es privado, al conectar Render y Vercel hay que concederles
+    acceso al repositorio AS22 (la pantalla de autorización de GitHub lo pide).
+  - Para el paso 4 (crear el administrador): Python 3.14 en tu computadora.
 
 
 -------------------------------------------------------------------------------
-2. API EN KOYEB
+1. RENDER: BASE DE DATOS + API
 -------------------------------------------------------------------------------
-  2.1  Crear cuenta en https://app.koyeb.com (se puede ingresar con GitHub).
+render.yaml crea los dos recursos juntos:
+  - Base PostgreSQL "escuela-db" (plan free).
+  - Servicio web "escuela-api" (plan free, Python 3.14.8, directorio backend).
 
-  2.2  "Create Service" -> "Web Service" -> fuente "GitHub".
-       Instalar/autorizar la app de Koyeb en GitHub y darle acceso al repositorio AS22
-       (al ser privado, hay que concederlo de forma explícita).
+  1.1  https://dashboard.render.com -> "New +" -> "Blueprint".
 
-  2.3  Configurar el build:
-           Repository ........ Gonpuri/AS22
-           Branch ............ main
-           Work directory .... backend
-           Builder ........... Dockerfile   (usa backend/Dockerfile)
-           Dockerfile location  Dockerfile  (por defecto)
+  1.2  Conectar GitHub y elegir el repositorio AS22. Render lee render.yaml y lista
+       los recursos que va a crear.
 
-  2.4  Variables de entorno ("Environment variables"):
-           DATABASE_URL           la URL del paso 1.3 (marcarla como Secret)
-           DJANGO_SECRET_KEY      una cadena larga y aleatoria (marcarla como Secret).
-                                  Para generarla, en PowerShell:
-                                    python -c "import secrets; print(secrets.token_urlsafe(50))"
-           DJANGO_ALLOWED_HOSTS   el dominio que Koyeb asigna al servicio, SIN https://
-                                  y sin barra final. Ejemplo: as22-api-micuenta.koyeb.app
-                                  (ver nota abajo si todavía no lo conocés)
-           CORS_ALLOWED_ORIGINS   por ahora  http://localhost:5173  (se corrige en el paso 4)
-       No definir DJANGO_DEBUG: en producción queda desactivado.
+  1.3  Render pide el valor de la variable marcada "sync: false":
+           CORS_ALLOWED_ORIGINS  -> por ahora poner  http://localhost:5173
+                                    (se corrige en el paso 3)
 
-  2.5  Puerto y chequeo de salud:
-           Puerto expuesto ... 8000, protocolo HTTP, ruta "/"
-           (el contenedor usa la variable PORT que define Koyeb; 8000 por defecto)
-           Health check ...... HTTP, ruta  /api/docs   (responde 200 sin login)
+  1.4  "Apply" / "Deploy Blueprint". Render ejecuta, en este orden:
+           pip install -r requirements.txt
+           python manage.py collectstatic --noinput
+           python manage.py migrate                 (crea las tablas en la base)
+       y luego inicia la API con uvicorn en el puerto que asigna Render.
 
-  2.6  Instancia: elegir la gratuita (Free / Eco) o la que corresponda según el plan
-       vigente de Koyeb. Región: la más cercana a la base de Render (por ejemplo, USA
-       si la base está en Oregon/Ohio). Ponerle un nombre al servicio, por ejemplo
-       "as22-api", y pulsar "Deploy".
+  1.5  Esperar a que "escuela-api" figure como "Live". Anotar su URL pública, por ejemplo:
+           https://escuela-api.onrender.com
+       (puede ser otra si el nombre ya estaba en uso: usar la que muestra Render).
 
-  2.7  Koyeb construye la imagen y la inicia. En cada arranque el contenedor ejecuta
-       "python manage.py migrate", así que las tablas se crean solas en la base.
-
-  2.8  Al terminar, anotar la URL pública del servicio, por ejemplo:
-           https://as22-api-micuenta.koyeb.app
-       NOTA sobre ALLOWED_HOSTS: el dominio exacto se muestra en el panel del servicio.
-       Si lo supiste recién ahora, volver a "Settings" -> "Environment variables",
-       corregir DJANGO_ALLOWED_HOSTS y redesplegar.
-
-  2.9  Probar en el navegador:   https://TU-API.koyeb.app/api/docs
+  1.6  Probar en el navegador:   https://TU-API.onrender.com/api/docs
        Debe abrir la documentación de FastAPI. Los demás endpoints piden login.
 
+  Qué configura Render automáticamente (no hay que tocarlo):
+    DATABASE_URL ............ se toma de la base (red interna de Render)
+    DJANGO_SECRET_KEY ....... se genera sola; no compartirla
+    RENDER_EXTERNAL_HOSTNAME  la define Render; la aplicación la usa como dominio permitido
+    PYTHON_VERSION .......... 3.14.8 (fijada en render.yaml)
+
+  Plan gratuito: el servicio web se "duerme" tras un rato sin uso y la primera petición
+  tarda en responder. La base gratuita tiene vencimiento y límites: verificar las
+  condiciones vigentes en render.com/pricing y pasar a un plan pago si el uso va a ser
+  permanente.
+
 
 -------------------------------------------------------------------------------
-3. FRONTEND EN VERCEL
+2. VERCEL: FRONTEND
 -------------------------------------------------------------------------------
-  3.1  https://vercel.com/new -> importar el repositorio AS22 (autorizar el acceso a
-       repositorios privados si lo pide).
+  2.1  https://vercel.com/new -> importar el repositorio AS22.
 
-  3.2  Configurar:
+  2.2  Configurar:
            Framework Preset ....... Vite   (se detecta solo)
            Root Directory ......... frontend      <-- IMPORTANTE, cambiarlo
            Build Command / Output . ya vienen definidos en frontend/vercel.json
+           Node.js ................ 20.19 o superior (declarado en package.json)
 
-  3.3  Variable de entorno:
-           VITE_API_URL = https://TU-API.koyeb.app     (URL del paso 2.8, sin barra final)
-       Se incorpora al construir el frontend: si se cambia, hay que redesplegar.
+  2.3  En "Environment Variables" agregar:
+           Nombre:  VITE_API_URL
+           Valor:   https://TU-API.onrender.com        (URL del paso 1.5, SIN barra final)
+       Se incorpora al construir el frontend: si se cambia después, hay que redesplegar.
 
-  3.4  "Deploy". Anotar la URL del frontend, por ejemplo https://as22.vercel.app
+  2.4  "Deploy". Anotar la URL del frontend, por ejemplo  https://as22.vercel.app
 
 
 -------------------------------------------------------------------------------
-4. HABILITAR EL FRONTEND EN LA API (CORS)
+3. HABILITAR EL FRONTEND EN LA API (CORS)
 -------------------------------------------------------------------------------
 Sin este paso el navegador bloquea las llamadas del frontend a la API.
 
-  4.1  Koyeb -> servicio -> "Settings" -> "Environment variables".
-  4.2  Editar CORS_ALLOWED_ORIGINS con la URL exacta de Vercel, sin barra final:
+  3.1  Render -> servicio "escuela-api" -> "Environment".
+  3.2  Editar CORS_ALLOWED_ORIGINS con la URL exacta de Vercel, sin barra final:
            https://as22.vercel.app
        Varios orígenes: separarlos con coma, sin espacios.
-  4.3  Guardar y redesplegar el servicio.
+  3.3  Guardar. Render redespliega automáticamente.
+
+  Nota: cada despliegue "preview" de Vercel tiene una URL distinta; solo el dominio
+  agregado en CORS_ALLOWED_ORIGINS podrá usar la API.
 
 
 -------------------------------------------------------------------------------
-5. CREAR EL PRIMER ADMINISTRADOR
+4. CREAR EL PRIMER ADMINISTRADOR
 -------------------------------------------------------------------------------
-La base nueva no tiene usuarios. Se crea el primero desde tu computadora, apuntando a
-la base de Render.
+La base nueva no tiene usuarios. La "Shell" web de Render requiere un plan pago, así que
+se crea el primero desde tu computadora, apuntando a la base de Render.
 
-  5.1  En PowerShell, dentro de la carpeta backend\ :
+  4.1  Render -> base "escuela-db" -> "Connections" -> copiar la "External Database URL"
+       (empieza con postgresql://...). Es una credencial secreta: no pegarla en chats,
+       commits ni capturas. (Desde tu PC no sirve la "Internal Database URL".)
 
+  4.2  En PowerShell, dentro de la carpeta backend\ :
+
+           python -m venv .venv                      (solo si no existe)
            .venv\Scripts\activate
-           $env:DATABASE_URL = "PEGAR_AQUI_LA_URL_DEL_PASO_1.3"
-           python manage.py migrate
+           pip install -r requirements.txt           (solo si no está instalado)
+           $env:DATABASE_URL = "PEGAR_AQUI_LA_EXTERNAL_URL"
            python manage.py createsuperuser
 
-       (El "migrate" es seguro aunque Koyeb ya lo haya ejecutado.)
        Ingresar usuario, email (opcional) y contraseña.
 
-  5.2  Limpiar la variable para no dejar la terminal apuntando a producción:
+  4.3  Si la conexión es rechazada por SSL, agregar  ?sslmode=require  al final de la URL.
+
+  4.4  Limpiar la variable para no dejar la terminal apuntando a producción:
            Remove-Item Env:DATABASE_URL
 
-  Si el entorno virtual no existe en esa computadora:
-           python -m venv .venv
-           .venv\Scripts\activate
-           pip install -r requirements.txt
+  4.5  Si la base gratuita permite conexiones externas solo desde IPs autorizadas, agregar
+       tu IP en la configuración de la base (Render -> escuela-db -> "Networking"/"Access").
 
 
 -------------------------------------------------------------------------------
-6. VERIFICACIÓN FINAL
+5. VERIFICACIÓN FINAL
 -------------------------------------------------------------------------------
-  6.1  Abrir la URL de Vercel e ingresar con el administrador del paso 5.
-  6.2  Recorrer el orden natural de carga:
+  5.1  Abrir la URL de Vercel e ingresar con el administrador del paso 4.
+       (La primera vez puede demorar si la API estaba dormida.)
+  5.2  Orden natural de carga:
            a) Estructura académica: Orientaciones, Años, Divisiones, Materias.
            b) Horarios.
            c) Recursos humanos: Personal -> Designaciones -> Cursos y materias.
@@ -155,10 +144,10 @@ la base de Render.
 
 
 -------------------------------------------------------------------------------
-7. ACTUALIZAR LA APLICACIÓN DESPUÉS
+6. ACTUALIZAR LA APLICACIÓN DESPUÉS
 -------------------------------------------------------------------------------
-  - Cada "git push" a main redespliega solo en Koyeb y en Vercel.
-  - Las migraciones se aplican en cada arranque de la API.
+  - Cada "git push" a main redespliega solo en Render y en Vercel.
+  - Las migraciones se aplican en cada despliegue de Render (están en el buildCommand).
   - Antes de subir cambios, correr las pruebas:
            backend:   cd backend ; .venv\Scripts\activate ; pytest
            frontend:  cd frontend ; npm test ; npm run build
@@ -167,42 +156,41 @@ la base de Render.
 -------------------------------------------------------------------------------
 PROBLEMAS FRECUENTES
 -------------------------------------------------------------------------------
-  * El build de Koyeb falla
-        -> Revisar que "Work directory" sea  backend  y el Builder  Dockerfile.
-           Ver el log del build en el panel del servicio.
-
-  * El servicio queda "Unhealthy" / reinicia
-        -> Mirar los "Runtime logs". Causas típicas: DATABASE_URL incorrecta (se usó
-           la Internal en vez de la External, o falta ?sslmode=require), o el puerto
-           expuesto no coincide con el de la variable PORT.
-
-  * "Bad Request (400)" al llamar a la API
-        -> DJANGO_ALLOWED_HOSTS no incluye el dominio real de Koyeb (paso 2.8).
-
   * "No se pudo conectar con el servidor" en el login
-        -> VITE_API_URL incorrecta o sin redesplegar el frontend (paso 3.3), o
-           CORS_ALLOWED_ORIGINS no coincide exactamente con la URL de Vercel (paso 4).
+        -> VITE_API_URL incorrecta o sin redesplegar el frontend (paso 2.3), o
+           CORS_ALLOWED_ORIGINS no coincide exactamente con la URL de Vercel (paso 3).
            En la consola del navegador (F12) aparece un error de CORS.
 
+  * "Bad Request (400)" al llamar a la API
+        -> El dominio no está permitido. En Render la aplicación toma el dominio de
+           RENDER_EXTERNAL_HOSTNAME; si usás un dominio propio, agregarlo en la
+           variable DJANGO_ALLOWED_HOSTS (separado por comas).
+
+  * Error 500 o el servicio no arranca
+        -> Render -> servicio -> "Logs". Causas típicas: migración fallida o variable
+           de entorno faltante.
+
+  * El Blueprint cobra un plan pago
+        -> Verificar que en render.yaml el servicio tenga  plan: free.
+
   * Primera carga lenta
-        -> Las instancias gratuitas pueden dormirse por inactividad; es esperable.
+        -> El plan gratuito de Render duerme el servicio; es esperable.
 
   * Recargar una pantalla en Vercel da 404
         -> Verificar que frontend/vercel.json esté en el repositorio.
 
   * Olvidé la contraseña del administrador
-        -> Repetir el paso 5 con:  python manage.py changepassword NOMBRE_DE_USUARIO
+        -> Repetir el paso 4 con:  python manage.py changepassword NOMBRE_DE_USUARIO
 
 
 -------------------------------------------------------------------------------
 RESUMEN DE VARIABLES DE ENTORNO
 -------------------------------------------------------------------------------
-  Koyeb (API):
-      DATABASE_URL           External URL de Render + ?sslmode=require   (Secret)
-      DJANGO_SECRET_KEY      cadena aleatoria larga                       (Secret)
-      DJANGO_ALLOWED_HOSTS   dominio de la API en Koyeb, sin https://
-      CORS_ALLOWED_ORIGINS   URL del frontend en Vercel
-      (DJANGO_DEBUG no se define)
+  Render (API) - editables en el panel:
+      CORS_ALLOWED_ORIGINS   URL del frontend en Vercel, sin barra final   (obligatoria)
+      DJANGO_ALLOWED_HOSTS   solo si se usa un dominio propio (opcional)
+      DATABASE_URL, DJANGO_SECRET_KEY, PYTHON_VERSION: ya definidas por render.yaml
+      (DJANGO_DEBUG no se define: en producción queda desactivado)
 
   Vercel (frontend):
-      VITE_API_URL           URL de la API en Koyeb
+      VITE_API_URL           URL de la API en Render, sin barra final
