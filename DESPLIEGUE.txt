@@ -127,7 +127,7 @@ sobrescribe.
   (editar el usuario). Cambiar ADMIN_PASSWORD no la modifica.
 
   Alternativa manual (desde tu PC, con la External Database URL de la base en Render):
-           cd backend ; .venv\Scriptsctivate
+           cd backend ; .venv\Scripts\activate
            $env:DATABASE_URL = "PEGAR_AQUI_LA_EXTERNAL_URL"     (agregar ?sslmode=require si lo pide)
            python manage.py createsuperuser
            Remove-Item Env:DATABASE_URL
