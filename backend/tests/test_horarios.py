@@ -94,3 +94,49 @@ def test_division_con_horario_no_se_elimina(admin_client, api_admin, estructura)
 def test_django_se_sirve_desde_la_misma_app(admin_user):
     r = TestClient(app).post("/api/auth/login/", data={"username": "admin", "password": "clave-segura-123"})
     assert r.status_code == 200 and "token" in r.json()
+
+
+def _docente(estructura, materia, apellido, dni, situacion="titular"):
+    from apps.rrhh.models import AsignacionDocente, Designacion, Personal
+    persona = Personal.objects.create(apellido=apellido, nombre="Ana", dni=dni)
+    des = Designacion.objects.create(personal=persona, categoria="profesor", turno="tarde", situacion_revista=situacion)
+    AsignacionDocente.objects.create(designacion=des, division=estructura["div"], materia=estructura[materia])
+
+
+def test_grilla_con_docentes_titular_y_suplente(api_admin, estructura):
+    api_admin.post(URL, json=_bloque(estructura))
+    api_admin.post(URL, json=_bloque(estructura, materia="contabilidad", dia=2))
+    _docente(estructura, "matematica", "Nievas", "30000001")
+    _docente(estructura, "matematica", "Ramírez", "30000002", situacion="suplente")
+    r = api_admin.get("/api/horarios/grilla", params={"division": estructura["div"].pk})
+    assert r.status_code == 200
+    datos = r.json()
+    assert datos["division"] == {"id": estructura["div"].pk, "anio": 4, "nombre": "1ª", "orientacion": "Economía"}
+    por_materia = {b["materia"]: b for b in datos["bloques"]}
+    assert por_materia["Matemática"]["docentes"] == [
+        {"nombre": "Nievas, Ana", "situacion_revista": "Titular"},
+        {"nombre": "Ramírez, Ana", "situacion_revista": "Suplente"},
+    ]
+    assert por_materia["Contabilidad"]["docentes"] == []
+
+
+def test_grilla_division_inexistente_y_sin_login(api_admin, estructura):
+    assert api_admin.get("/api/horarios/grilla", params={"division": 999}).status_code == 404
+    assert TestClient(app).get("/api/horarios/grilla", params={"division": 1}).status_code == 401
+
+
+def test_cors_en_las_rutas_de_fastapi(api_admin, estructura):
+    origen = "http://localhost:5173"
+    r = api_admin.get(URL, headers={"Origin": origen})
+    assert r.status_code == 200 and r.headers["access-control-allow-origin"] == origen
+    pre = api_admin.options(URL, headers={
+        "Origin": origen, "Access-Control-Request-Method": "POST", "Access-Control-Request-Headers": "authorization,content-type",
+    })
+    assert pre.status_code == 200 and "authorization" in pre.headers["access-control-allow-headers"].lower()
+    assert api_admin.get(URL, headers={"Origin": "https://intruso.example"}).headers.get("access-control-allow-origin") is None
+
+
+def test_cors_sin_cabeceras_duplicadas_en_las_rutas_de_django(estructura):
+    # Django (corsheaders) y FastAPI configuran CORS: el navegador rechaza la cabecera repetida.
+    r = TestClient(app).get("/api/academico/anios/", headers={"Origin": "http://localhost:5173"})
+    assert r.headers.get_list("access-control-allow-origin") == ["http://localhost:5173"]

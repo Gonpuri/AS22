@@ -15,7 +15,7 @@ Aplicación web modular para una escuela secundaria de la Provincia de Buenos Ai
 |---|---|---|
 | 1 | `academico` | Orientaciones, años, divisiones y materias (asociadas a años y orientaciones) |
 | 1 | `core` | Administración del sistema: login por token, usuarios (alta, edición, baja, activar/desactivar, rol administrador) |
-| 2 | `horarios` | Bloques horarios: división + materia + día + hora de inicio/fin |
+| 2 | `horarios` | Bloques horarios (división + materia + día + hora de inicio/fin) y vista de grilla por curso, con el docente de cada materia al pasar el puntero |
 | 3 | `rrhh` | Personal y sus designaciones (categoría + turno): preceptores, equipo directivo, profesores, EMATPs y otros. Los docentes tienen cursos y materias asignados |
 
 ### Reglas de negocio

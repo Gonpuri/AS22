@@ -5,7 +5,10 @@ const modulo: ModuloFrontend = {
   etiqueta: 'Horarios',
   icono: 'mdi-calendar-clock',
   orden: 20,
-  rutas: [{ path: 'bloques', etiqueta: 'Horarios', component: () => import('./views/Bloques.vue') }],
+  rutas: [
+    { path: 'grilla', etiqueta: 'Horario por curso', component: () => import('./views/Grilla.vue') },
+    { path: 'bloques', etiqueta: 'Carga de horarios', component: () => import('./views/Bloques.vue') },
+  ],
 }
 
 export default modulo

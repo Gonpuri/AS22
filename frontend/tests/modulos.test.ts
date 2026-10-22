@@ -15,6 +15,11 @@ describe('registro de módulos', () => {
     expect(academico.rutas.map((r) => r.path)).toEqual(['orientaciones', 'anios', 'divisiones', 'materias'])
   })
 
+  it('horarios expone la grilla por curso y la carga de bloques', () => {
+    const horarios = modulos.find((m) => m.nombre === 'horarios')!
+    expect(horarios.rutas.map((r) => r.path)).toEqual(['grilla', 'bloques'])
+  })
+
   it('RR. HH. expone personal, designaciones y cursos/materias de docentes', () => {
     const rrhh = modulos.find((m) => m.nombre === 'rrhh')!
     expect(rrhh.rutas.map((r) => r.path)).toEqual(['personal', 'designaciones', 'asignaciones'])

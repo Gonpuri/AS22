@@ -15,8 +15,17 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
 django_asgi = get_asgi_application()  # inicializa Django (apps y modelos) antes de importar los routers
 
 from fastapi import FastAPI  # noqa: E402
+from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
 
 app = FastAPI(title="Sistema Escolar", docs_url="/api/docs", openapi_url="/api/openapi.json")
+
+# El CORS de Django (corsheaders) no alcanza a las rutas de FastAPI: se configura también acá.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.CORS_ALLOWED_ORIGINS,
+    allow_methods=["*"],
+    allow_headers=["authorization", "content-type"],
+)
 
 for _modulo in settings.MODULOS:
     if find_spec(f"apps.{_modulo}.api"):

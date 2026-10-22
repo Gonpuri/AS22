@@ -3,9 +3,10 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 
 from apps.academico.models import Division, Materia
 from apps.core.fastapi_auth import administrador, usuario_actual
+from apps.rrhh.models import AsignacionDocente
 
 from .models import BloqueHorario
-from .schemas import BloqueIn, BloqueOut
+from .schemas import BloqueGrilla, BloqueIn, BloqueOut, DivisionOut, DocenteOut, GrillaOut
 from .services import ErrorHorario, validar_bloque
 
 router = APIRouter(tags=["horarios"])
@@ -49,6 +50,35 @@ def _bloque_o_404(pk):
     if bloque is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Bloque inexistente.")
     return bloque
+
+
+@router.get("/grilla", response_model=GrillaOut)
+def grilla(division: int, _=Depends(usuario_actual)):
+    """Horario de una división con los docentes de cada materia (titulares y suplentes)."""
+    div = Division.objects.select_related("anio", "orientacion").filter(pk=division).first()
+    if div is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "División inexistente.")
+    docentes: dict[int, list[DocenteOut]] = {}
+    asignaciones = AsignacionDocente.objects.filter(division=div).select_related("designacion__personal")
+    for a in asignaciones:
+        docentes.setdefault(a.materia_id, []).append(DocenteOut(
+            nombre=str(a.designacion.personal),
+            situacion_revista=a.designacion.get_situacion_revista_display(),
+        ))
+    bloques = BloqueHorario.objects.filter(division=div).select_related("materia")
+    return GrillaOut(
+        division=DivisionOut(
+            id=div.id, anio=div.anio.numero, nombre=div.nombre,
+            orientacion=div.orientacion.nombre if div.orientacion else None,
+        ),
+        bloques=[
+            BloqueGrilla(
+                id=b.id, dia=b.dia, hora_inicio=b.hora_inicio, hora_fin=b.hora_fin,
+                materia=b.materia.nombre, docentes=docentes.get(b.materia_id, []),
+            )
+            for b in bloques
+        ],
+    )
 
 
 @router.get("/bloques", response_model=list[BloqueOut])
