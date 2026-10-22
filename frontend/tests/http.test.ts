@@ -1,12 +1,13 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { guardarToken, http, mensajeError, tokenGuardado } from '@/api/http'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { guardarToken, http, mensajeError, reintentos, tokenGuardado } from '@/api/http'
 import { crud } from '@/api/crud'
 
 describe('mensajeError', () => {
   const err = (data: unknown) => ({ response: { data } })
 
   it('sin respuesta del servidor', () => {
-    expect(mensajeError(new Error('x'))).toBe('No se pudo conectar con el servidor.')
+    expect(mensajeError(new Error('x'))).toContain('No se pudo conectar con el servidor')
+    expect(mensajeError(new Error('x'))).toContain(String(http.defaults.baseURL))
   })
   it('detail de DRF/FastAPI', () => {
     expect(mensajeError(err({ detail: 'No permitido.' }))).toBe('No permitido.')
@@ -57,5 +58,55 @@ describe('crud', () => {
     const put = vi.spyOn(http, 'put').mockResolvedValue({ data: {} })
     await crud('/api/horarios/bloques', false).actualizar(5, {})
     expect(put).toHaveBeenCalledWith('/api/horarios/bloques/5', {})
+  })
+})
+
+describe('reintentos mientras la API despierta', () => {
+  const original = { ...reintentos }
+  const adaptador = (fallos: number, llamadas: string[]) => async (config: any) => {
+    llamadas.push(`${config.method} ${config.url}`)
+    if (llamadas.length <= fallos) throw Object.assign(new Error('Network Error'), { config, isAxiosError: true })
+    return { data: [], status: 200, statusText: 'OK', headers: {}, config }
+  }
+
+  beforeEach(() => {
+    reintentos.esperaMs = 0
+    reintentos.maximo = 3
+  })
+  afterEach(() => Object.assign(reintentos, original))
+
+  it('reintenta una lectura que falla por red y termina bien', async () => {
+    const llamadas: string[] = []
+    const r = await http.get('/api/academico/anios/', { adapter: adaptador(2, llamadas) })
+    expect(r.status).toBe(200)
+    expect(llamadas).toHaveLength(3)
+  })
+
+  it('reintenta el login', async () => {
+    const llamadas: string[] = []
+    await http.post('/api/auth/login/', {}, { adapter: adaptador(1, llamadas) })
+    expect(llamadas).toHaveLength(2)
+  })
+
+  it('no reintenta altas ni cambios (podrían duplicarse)', async () => {
+    const llamadas: string[] = []
+    await expect(http.post('/api/academico/orientaciones/', {}, { adapter: adaptador(5, llamadas) })).rejects.toThrow()
+    expect(llamadas).toHaveLength(1)
+  })
+
+  it('se rinde tras el máximo de intentos', async () => {
+    const llamadas: string[] = []
+    await expect(http.get('/api/x/', { adapter: adaptador(99, llamadas) })).rejects.toThrow()
+    expect(llamadas).toHaveLength(4)
+  })
+
+  it('no reintenta si el servidor respondió con error', async () => {
+    const llamadas: string[] = []
+    const adapter = async (config: any) => {
+      llamadas.push('x')
+      throw Object.assign(new Error('403'), { config, isAxiosError: true, response: { status: 403, data: {} } })
+    }
+    await expect(http.get('/api/x/', { adapter })).rejects.toThrow()
+    expect(llamadas).toHaveLength(1)
   })
 })
