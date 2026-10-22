@@ -5,6 +5,9 @@ from django.conf import settings
 from django.contrib import admin
 from django.urls import include, path
 
+admin.site.site_header = "Sistema Escolar - Administración"
+admin.site.site_title = "Sistema Escolar"
+
 urlpatterns = [
     path("django-admin/", admin.site.urls),
     path("api/", include("apps.core.urls")),

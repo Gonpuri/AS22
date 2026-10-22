@@ -185,6 +185,17 @@ PROBLEMAS FRECUENTES
         -> Falta crear el administrador: ver paso 4 (ADMIN_USERNAME y ADMIN_PASSWORD en Render
            y redesplegar).
 
+  * No puedo entrar al panel de Django ("Por favor introduzca nombre de usuario y contraseña correctos")
+        -> La dirección correcta es  https://TU-API.onrender.com/django-admin/  (no /admin/).
+           Si la página carga pero rechaza el usuario, el administrador no existe o la
+           contraseña no coincide. En Render -> servicio -> "Environment" definir:
+               ADMIN_USERNAME        el usuario
+               ADMIN_PASSWORD        la contraseña nueva
+               ADMIN_RESET_PASSWORD  1
+           y hacer "Manual Deploy" -> "Deploy latest commit". En el log del build debe
+           aparecer "Administrador '...' creado." o "Contraseña de '...' restablecida."
+           Entrar con esos datos y después BORRAR ADMIN_PASSWORD y ADMIN_RESET_PASSWORD.
+
   * Olvidé la contraseña del administrador
         -> Desde tu PC, con DATABASE_URL apuntando a la base de Render:
            python manage.py changepassword NOMBRE_DE_USUARIO

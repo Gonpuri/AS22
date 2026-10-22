@@ -31,3 +31,14 @@ def test_es_idempotente_y_no_pisa_la_clave(monkeypatch):
     call_command("crear_admin")
     assert User.objects.count() == 1
     assert User.objects.get(username="directora").check_password("la-clave-original")
+
+
+def test_restablece_la_clave_solo_si_se_pide(monkeypatch):
+    user = User.objects.create_user("directora", password="la-clave-original", is_active=False)
+    monkeypatch.setenv("ADMIN_USERNAME", "directora")
+    monkeypatch.setenv("ADMIN_PASSWORD", "nueva-clave-456")
+    monkeypatch.setenv("ADMIN_RESET_PASSWORD", "1")
+    call_command("crear_admin")
+    user.refresh_from_db()
+    assert user.check_password("nueva-clave-456")
+    assert user.is_active and user.is_staff and user.is_superuser
