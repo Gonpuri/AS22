@@ -105,36 +105,38 @@ Sin este paso el navegador bloquea las llamadas del frontend a la API.
 -------------------------------------------------------------------------------
 4. CREAR EL PRIMER ADMINISTRADOR
 -------------------------------------------------------------------------------
-La base nueva no tiene usuarios. La "Shell" web de Render requiere un plan pago, así que
-se crea el primero desde tu computadora, apuntando a la base de Render.
+La base nueva no tiene usuarios, y sin uno no se puede ingresar al sistema. El administrador
+se crea solo en cada despliegue de Render (comando "crear_admin" del buildCommand) a partir
+de dos variables de entorno. Si el usuario ya existe no se toca, y su contraseña nunca se
+sobrescribe.
 
-  4.1  Render -> base "escuela-db" -> "Connections" -> copiar la "External Database URL"
-       (empieza con postgresql://...). Es una credencial secreta: no pegarla en chats,
-       commits ni capturas. (Desde tu PC no sirve la "Internal Database URL".)
+  4.1  Render -> servicio "escuela-api" -> "Environment" y definir:
+           ADMIN_USERNAME   el nombre de usuario (render.yaml propone "admin")
+           ADMIN_PASSWORD   una contraseña segura (mínimo 8 caracteres)
 
-  4.2  En PowerShell, dentro de la carpeta backend\ :
+  4.2  "Manual Deploy" -> "Deploy latest commit". En el log del build debe aparecer:
+           Administrador 'admin' creado.
 
-           python -m venv .venv                      (solo si no existe)
-           .venv\Scripts\activate
-           pip install -r requirements.txt           (solo si no está instalado)
-           $env:DATABASE_URL = "PEGAR_AQUI_LA_EXTERNAL_URL"
+  4.3  Ingresar al frontend con ese usuario y contraseña.
+
+  4.4  Para dar de alta a las demás personas usar Administración -> Usuarios. Después de
+       entrar por primera vez conviene borrar ADMIN_PASSWORD del panel de Render (el
+       usuario ya quedó creado y la contraseña no se vuelve a usar).
+
+  Para cambiar la contraseña del administrador: hacerlo desde Administración -> Usuarios
+  (editar el usuario). Cambiar ADMIN_PASSWORD no la modifica.
+
+  Alternativa manual (desde tu PC, con la External Database URL de la base en Render):
+           cd backend ; .venv\Scriptsctivate
+           $env:DATABASE_URL = "PEGAR_AQUI_LA_EXTERNAL_URL"     (agregar ?sslmode=require si lo pide)
            python manage.py createsuperuser
-
-       Ingresar usuario, email (opcional) y contraseña.
-
-  4.3  Si la conexión es rechazada por SSL, agregar  ?sslmode=require  al final de la URL.
-
-  4.4  Limpiar la variable para no dejar la terminal apuntando a producción:
            Remove-Item Env:DATABASE_URL
-
-  4.5  Si la base gratuita permite conexiones externas solo desde IPs autorizadas, agregar
-       tu IP en la configuración de la base (Render -> escuela-db -> "Networking"/"Access").
 
 
 -------------------------------------------------------------------------------
 5. VERIFICACIÓN FINAL
 -------------------------------------------------------------------------------
-  5.1  Abrir la URL de Vercel e ingresar con el administrador del paso 4.
+  5.1  Abrir la URL de Vercel e ingresar con ADMIN_USERNAME / ADMIN_PASSWORD (paso 4).
        (La primera vez puede demorar si la API estaba dormida.)
   5.2  Orden natural de carga:
            a) Estructura académica: Orientaciones, Años, Divisiones, Materias.
@@ -179,8 +181,13 @@ PROBLEMAS FRECUENTES
   * Recargar una pantalla en Vercel da 404
         -> Verificar que frontend/vercel.json esté en el repositorio.
 
+  * El login pide usuario y no tengo ninguno
+        -> Falta crear el administrador: ver paso 4 (ADMIN_USERNAME y ADMIN_PASSWORD en Render
+           y redesplegar).
+
   * Olvidé la contraseña del administrador
-        -> Repetir el paso 4 con:  python manage.py changepassword NOMBRE_DE_USUARIO
+        -> Desde tu PC, con DATABASE_URL apuntando a la base de Render:
+           python manage.py changepassword NOMBRE_DE_USUARIO
 
 
 -------------------------------------------------------------------------------
@@ -189,6 +196,8 @@ RESUMEN DE VARIABLES DE ENTORNO
   Render (API) - editables en el panel:
       CORS_ALLOWED_ORIGINS   URL del frontend en Vercel, sin barra final   (obligatoria)
       DJANGO_ALLOWED_HOSTS   solo si se usa un dominio propio (opcional)
+      ADMIN_USERNAME         usuario del administrador inicial                      (paso 4)
+      ADMIN_PASSWORD         su contraseña; se puede borrar después del primer ingreso
       DATABASE_URL, DJANGO_SECRET_KEY, PYTHON_VERSION: ya definidas por render.yaml
       (DJANGO_DEBUG no se define: en producción queda desactivado)
 
