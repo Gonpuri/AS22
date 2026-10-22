@@ -5,15 +5,15 @@ import { mensajeError } from '@/api/http'
 import { auth } from '@/stores/auth'
 import type { Campo } from './campos'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   titulo: string
   endpoint: string
   campos: Campo[]
   /** DRF exige barra final en las rutas (por defecto); FastAPI no. */
   barraFinal?: boolean
-}>()
+}>(), { barraFinal: true }) // Vue pone en false las props Boolean ausentes: el default evita perder la barra
 
-const api = crud(props.endpoint, props.barraFinal ?? true)
+const api = crud(props.endpoint, props.barraFinal)
 const filas = ref<Registro[]>([])
 const error = ref('')
 const dialogo = ref(false)

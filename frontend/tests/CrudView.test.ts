@@ -6,6 +6,7 @@ import * as directivas from 'vuetify/directives'
 import CrudView from '@/components/CrudView.vue'
 import type { Campo } from '@/components/campos'
 import { auth } from '@/stores/auth'
+import { crud } from '@/api/crud'
 
 const api = vi.hoisted(() => ({
   listar: vi.fn(),
@@ -13,7 +14,7 @@ const api = vi.hoisted(() => ({
   actualizar: vi.fn(),
   eliminar: vi.fn(),
 }))
-vi.mock('@/api/crud', () => ({ crud: () => api }))
+vi.mock('@/api/crud', () => ({ crud: vi.fn(() => api) }))
 
 const campos: Campo[] = [
   { clave: 'nombre', etiqueta: 'Nombre', requerido: true },
@@ -67,6 +68,15 @@ describe('CrudView', () => {
     await w.find('[data-test="editar"]').trigger('click')
     await flushPromises()
     expect(document.body.querySelector('#form-crud')!.textContent).not.toContain('Categorías')
+  })
+
+  it('usa barra final en las URLs por defecto (DRF) y no la usa si se indica (FastAPI)', async () => {
+    const vuetify = createVuetify({ components: componentes, directives: directivas })
+    const props = { titulo: 'Cosas', endpoint: '/api/x', campos }
+    mount(CrudView, { props, global: { plugins: [vuetify] } })
+    expect(crud).toHaveBeenLastCalledWith('/api/x', true)
+    mount(CrudView, { props: { ...props, barraFinal: false }, global: { plugins: [vuetify] } })
+    expect(crud).toHaveBeenLastCalledWith('/api/x', false)
   })
 
   it('un usuario común no ve acciones de edición', async () => {
