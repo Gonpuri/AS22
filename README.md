@@ -30,6 +30,7 @@ Aplicación web modular para una escuela secundaria de la Provincia de Buenos Ai
 - Un **bloque horario** exige: materia de la división, fin posterior al inicio y sin superposición con otro bloque de la misma división el mismo día (lunes a viernes).
 - No se puede eliminar un año, orientación, división o materia con registros que dependan de ellos (HTTP 409).
 - La **consulta de docentes** cruza las asignaciones del docente (curso + materia) con los bloques horarios de ese curso, según el día de la semana de cada fecha. No tiene en cuenta feriados, asuetos ni licencias. Si titular y suplente están asignados a la misma materia de un curso, ambos figuran con esos bloques. Intervalo máximo: 366 días.
+- Los **horarios de 1.º 2.ª a 1.º 6.ª** (2026) se cargan con `python manage.py cargar_horarios_iniciales` (idempotente; reutiliza materias y divisiones existentes). En Render se activa con la variable `CARGAR_HORARIOS_INICIALES=1` (ver `DESPLIEGUE.txt`).
 - Cualquier usuario autenticado consulta; solo los administradores (`is_staff`) modifican.
 
 ### Agregar un módulo nuevo (p. ej. Alumnos)

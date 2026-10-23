@@ -156,6 +156,30 @@ sobrescribe.
 
 
 -------------------------------------------------------------------------------
+CARGAR LOS HORARIOS DE 1.º 2.ª A 1.º 6.ª (UNA SOLA VEZ)
+-------------------------------------------------------------------------------
+Los horarios de esos cursos (hojas "1°2°" a "1°6°" del Excel "NUEVO HORARIO 20261.1.2.xlsx") ya
+están en el repositorio (backend/apps/horarios/datos/horarios_1er_anio_2026.json). Se cargan en la
+base de Render durante un despliegue, solo si se pide con una variable:
+
+  1. Render -> servicio "escuela-api" -> "Environment" -> agregar
+         CARGAR_HORARIOS_INICIALES = 1
+  2. "Manual Deploy" -> "Deploy latest commit". En el log del build debe aparecer:
+         Horarios iniciales: 120 bloques creados, 0 ya existían; 8 materias y 5 divisiones nuevas.
+     (los números varían si ya habías cargado algo: se reutilizan las materias y divisiones existentes)
+  3. Si aparece alguna línea "OMITIDO: ...", ese bloque no se cargó (por ejemplo, se superponía con
+     otro ya existente); el resto sí. Se corrige a mano en Horarios -> Carga de horarios.
+  4. Borrar la variable CARGAR_HORARIOS_INICIALES para que no se vuelva a ejecutar en cada despliegue
+     (volvería a crear los bloques que hayas borrado a propósito).
+
+La carga es segura de repetir: no duplica año, divisiones, materias ni bloques. Crea el año 1, las
+divisiones 2ª a 6ª (sin orientación: ciclo básico) y las materias Matemática, Inglés, Prácticas del
+lenguaje, Ciencias Naturales, Ciencias Sociales, Educación Artística, Construcción de la ciudadanía y
+Educación Física. Si ya tenías una materia con otro nombre (p. ej. "Cs Naturales"), se reutiliza.
+No carga preceptores ni docentes (el sistema exige su DNI): eso se hace desde Recursos humanos.
+
+
+-------------------------------------------------------------------------------
 PROBLEMAS FRECUENTES
 -------------------------------------------------------------------------------
   * "No se pudo conectar con el servidor" en el login
