@@ -2,10 +2,14 @@
 import { computed, ref, watch } from 'vue'
 import { http, mensajeError } from '@/api/http'
 import { useOpciones } from '@/api/opciones'
-import { armarFilas, DIAS, lineasDocentes, rutaFicha, type BloqueGrilla } from '../grilla'
+import {
+  armarFilas, DIAS, lineasDocentes, lineasPersonal, nombresEncabezado, type BloqueGrilla, type Docente,
+} from '../grilla'
+import CartelPersonal from './CartelPersonal.vue'
 
 interface Grilla {
   division: { id: number; anio: number; nombre: string; orientacion: string | null }
+  preceptores?: Docente[] // ausente si la API aún no se actualizó
   bloques: BloqueGrilla[]
 }
 
@@ -15,6 +19,7 @@ const grilla = ref<Grilla | null>(null)
 const error = ref('')
 
 const filas = computed(() => armarFilas(grilla.value?.bloques ?? []))
+const preceptores = computed(() => grilla.value?.preceptores ?? [])
 
 watch(divisionId, async (id) => {
   grilla.value = null
@@ -45,6 +50,16 @@ watch(divisionId, async (id) => {
         <span>Curso: <b>{{ grilla.division.anio }}°</b></span>
         <span>División: <b>{{ grilla.division.nombre }}</b></span>
         <span v-if="grilla.division.orientacion">Modalidad: <b>{{ grilla.division.orientacion }}</b></span>
+        <span data-test="preceptor">
+          Preceptor/a:
+          <v-menu v-if="preceptores.length" open-on-hover open-on-click :close-delay="200" location="bottom">
+            <template #activator="{ props }">
+              <b v-bind="props" class="preceptor-nombre" data-test="preceptor-nombre">{{ nombresEncabezado(preceptores) }}</b>
+            </template>
+            <CartelPersonal :lineas="lineasPersonal(preceptores)" vacio="" data-test="preceptores" />
+          </v-menu>
+          <span v-else class="text-medium-emphasis">sin asignar</span>
+        </span>
       </div>
       <h3 class="titulo">HORARIO</h3>
       <table>
@@ -67,19 +82,7 @@ watch(divisionId, async (id) => {
                 <template #activator="{ props }">
                   <span v-bind="props" class="materia-nombre" data-test="materia">{{ f.celdas[d.numero]!.materia }}</span>
                 </template>
-                <v-card class="pa-3 docentes" data-test="docentes">
-                  <div v-if="!f.celdas[d.numero]!.docentes.length">Sin docente asignado</div>
-                  <div v-for="l in lineasDocentes(f.celdas[d.numero]!)" :key="`${l.personalId}-${l.reemplaza?.personalId}`" class="docente">
-                    <router-link :to="rutaFicha(l.personalId)" data-test="docente">{{ l.nombre }}</router-link>
-                    <span> ({{ l.situacion }})</span>
-                    <template v-if="l.reemplaza">
-                      <span class="text-medium-emphasis"> · suplente de </span>
-                      <router-link :to="rutaFicha(l.reemplaza.personalId)" data-test="reemplazado">{{ l.reemplaza.nombre }}</router-link>
-                      <span> ({{ l.reemplaza.situacion }})</span>
-                    </template>
-                    <span v-else-if="l.sinTitular" class="text-medium-emphasis"> · sin titular indicado</span>
-                  </div>
-                </v-card>
+                <CartelPersonal :lineas="lineasDocentes(f.celdas[d.numero]!)" vacio="Sin docente asignado" data-test="docentes" />
               </v-menu>
             </td>
           </tr>
@@ -100,6 +103,5 @@ td.hora { white-space: nowrap; width: 110px; }
 td.materia { height: 44px; }
 .materia-nombre { cursor: help; display: inline-block; width: 100%; }
 .vacio { padding: 24px; color: gray; }
-.docentes { min-width: 260px; }
-.docente + .docente { margin-top: 6px; }
+.preceptor-nombre { cursor: help; }
 </style>

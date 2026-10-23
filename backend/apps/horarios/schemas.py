@@ -46,5 +46,6 @@ class DivisionOut(BaseModel):
 
 
 class GrillaOut(BaseModel):
+    preceptores: list[DocenteOut] = []
     division: DivisionOut
     bloques: list[BloqueGrilla]

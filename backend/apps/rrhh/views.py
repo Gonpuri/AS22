@@ -1,7 +1,12 @@
 from rest_framework import viewsets
 
-from .models import AsignacionDocente, Designacion, Personal
-from .serializers import AsignacionDocenteSerializer, DesignacionSerializer, PersonalSerializer
+from .models import AsignacionDocente, AsignacionPreceptor, Designacion, Personal
+from .serializers import (
+    AsignacionDocenteSerializer,
+    AsignacionPreceptorSerializer,
+    DesignacionSerializer,
+    PersonalSerializer,
+)
 
 
 def _filtrar(qs, request, **filtros):
@@ -38,3 +43,11 @@ class AsignacionDocenteViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         qs = AsignacionDocente.objects.select_related("designacion__personal", "division", "materia")
         return _filtrar(qs, self.request, designacion="designacion", division="division", materia="materia")
+
+
+class AsignacionPreceptorViewSet(viewsets.ModelViewSet):
+    serializer_class = AsignacionPreceptorSerializer
+
+    def get_queryset(self):
+        qs = AsignacionPreceptor.objects.select_related("designacion__personal", "division__anio")
+        return _filtrar(qs, self.request, designacion="designacion", division="division")

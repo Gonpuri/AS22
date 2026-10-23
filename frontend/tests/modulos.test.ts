@@ -25,9 +25,9 @@ describe('registro de módulos', () => {
     expect(consulta.rutas.map((r) => r.path)).toEqual(['clases'])
   })
 
-  it('RR. HH. expone personal, designaciones y cursos/materias de docentes', () => {
+  it('RR. HH. expone personal, designaciones, preceptores por curso y cursos/materias de docentes', () => {
     const rrhh = modulos.find((m) => m.nombre === 'rrhh')!
-    expect(rrhh.rutas.map((r) => r.path)).toEqual(['personal', 'personal/:id', 'designaciones', 'asignaciones'])
+    expect(rrhh.rutas.map((r) => r.path)).toEqual(['personal', 'personal/:id', 'designaciones', 'preceptores', 'asignaciones'])
   })
 
   it('la ficha personal existe como ruta pero no aparece en el menú', () => {

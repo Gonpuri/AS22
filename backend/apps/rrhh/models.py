@@ -92,21 +92,63 @@ class AsignacionDocente(models.Model):
             raise ValidationError("Solo los profesores y EMATPs tienen cursos y materias asignados.")
         if not self.division.materias().filter(pk=self.materia_id).exists():
             raise ValidationError("La materia no corresponde al año/orientación de la división.")
-        suplente = Designacion.SituacionRevista.SUPLENTE
-        es_suplente = self.designacion.situacion_revista == suplente
-        if self.suplente_de_id is None:
-            if es_suplente:
-                raise ValidationError("Un suplente debe indicar a quién reemplaza (suplente de).")
-            return
-        if not es_suplente:
-            raise ValidationError("Solo un suplente puede indicar a quién reemplaza.")
-        reemplazado = self.suplente_de
-        if (reemplazado.division_id, reemplazado.materia_id) != (self.division_id, self.materia_id):
-            raise ValidationError("El docente reemplazado debe ser del mismo curso y materia.")
-        if reemplazado.designacion.situacion_revista == suplente:
-            raise ValidationError("Se reemplaza a un titular, titular interino o provisional, no a otro suplente.")
-        if reemplazado.designacion.personal_id == self.designacion.personal_id:
-            raise ValidationError("Una persona no puede ser suplente de sí misma.")
+        validar_suplencia(
+            self,
+            mismo_destino=lambda r: (r.division_id, r.materia_id) == (self.division_id, self.materia_id),
+            mensaje_destino="El docente reemplazado debe ser del mismo curso y materia.",
+        )
 
     def __str__(self):
         return f"{self.designacion} · {self.division} · {self.materia}"
+
+
+class AsignacionPreceptor(models.Model):
+    """Curso (división) a cargo de una designación de preceptor. Un curso puede tener más de un
+    preceptor (p. ej. uno por turno, o un titular y su suplente)."""
+
+    designacion = models.ForeignKey(Designacion, on_delete=models.CASCADE, related_name="asignaciones_preceptor")
+    division = models.ForeignKey(Division, on_delete=models.PROTECT, related_name="asignaciones_preceptor")
+    suplente_de = models.ForeignKey(
+        "self", null=True, blank=True, on_delete=models.PROTECT, related_name="suplentes",
+        help_text="Asignación del preceptor al que reemplaza (mismo curso). Obligatoria para suplentes.",
+    )
+
+    class Meta:
+        ordering = ["division", "designacion"]
+        verbose_name = "preceptor por curso"
+        verbose_name_plural = "preceptores por curso"
+        constraints = [
+            models.UniqueConstraint(fields=["designacion", "division"], name="asignacion_preceptor_unica"),
+        ]
+
+    def clean(self):
+        if self.designacion.categoria != Designacion.Categoria.PRECEPTOR:
+            raise ValidationError("Solo los preceptores tienen cursos a cargo.")
+        validar_suplencia(
+            self,
+            mismo_destino=lambda r: r.division_id == self.division_id,
+            mensaje_destino="El preceptor reemplazado debe ser del mismo curso.",
+        )
+
+    def __str__(self):
+        return f"{self.designacion} · {self.division}"
+
+
+def validar_suplencia(asignacion, mismo_destino, mensaje_destino):
+    """Reglas de `suplente_de`, comunes a docentes y preceptores: obligatorio para suplentes, solo para
+    ellos, hacia alguien del mismo destino que ocupe el cargo (no otro suplente) y que sea otra persona."""
+    suplente = Designacion.SituacionRevista.SUPLENTE
+    es_suplente = asignacion.designacion.situacion_revista == suplente
+    if asignacion.suplente_de_id is None:
+        if es_suplente:
+            raise ValidationError("Un suplente debe indicar a quién reemplaza (suplente de).")
+        return
+    if not es_suplente:
+        raise ValidationError("Solo un suplente puede indicar a quién reemplaza.")
+    reemplazado = asignacion.suplente_de
+    if not mismo_destino(reemplazado):
+        raise ValidationError(mensaje_destino)
+    if reemplazado.designacion.situacion_revista == suplente:
+        raise ValidationError("Se reemplaza a un titular, titular interino o provisional, no a otro suplente.")
+    if reemplazado.designacion.personal_id == asignacion.designacion.personal_id:
+        raise ValidationError("Una persona no puede ser suplente de sí misma.")

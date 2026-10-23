@@ -156,3 +156,36 @@ def test_cors_sin_cabeceras_duplicadas_en_las_rutas_de_django(estructura):
     # Django (corsheaders) y FastAPI configuran CORS: el navegador rechaza la cabecera repetida.
     r = TestClient(app).get("/api/academico/anios/", headers={"Origin": "http://localhost:5173"})
     assert r.headers.get_list("access-control-allow-origin") == ["http://localhost:5173"]
+
+
+def _preceptor_del_curso(estructura, apellido, dni, situacion="titular", suplente_de=None):
+    from apps.rrhh.models import AsignacionPreceptor, Designacion, Personal
+    persona = Personal.objects.create(apellido=apellido, nombre="Marcela", dni=dni)
+    des = Designacion.objects.create(personal=persona, categoria="preceptor", turno="tarde", situacion_revista=situacion)
+    return AsignacionPreceptor.objects.create(designacion=des, division=estructura["div"], suplente_de=suplente_de)
+
+
+def test_grilla_incluye_al_preceptor_y_a_su_suplente(api_admin, estructura):
+    titular = _preceptor_del_curso(estructura, "Furchs", "50000001")
+    suplente = _preceptor_del_curso(estructura, "Zárate", "50000002", situacion="suplente", suplente_de=titular)
+    r = api_admin.get("/api/horarios/grilla", params={"division": estructura["div"].pk})
+    assert r.status_code == 200
+    assert r.json()["preceptores"] == [
+        {"personal_id": titular.designacion.personal_id, "nombre": "Furchs, Marcela",
+         "situacion_revista": "Titular", "es_suplente": False, "suplente_de": None},
+        {"personal_id": suplente.designacion.personal_id, "nombre": "Zárate, Marcela",
+         "situacion_revista": "Suplente", "es_suplente": True,
+         "suplente_de": {"personal_id": titular.designacion.personal_id, "nombre": "Furchs, Marcela",
+                         "situacion_revista": "Titular"}},
+    ]
+
+
+def test_grilla_sin_preceptor_y_solo_los_del_curso(api_admin, estructura):
+    from apps.academico.models import Division
+    assert api_admin.get("/api/horarios/grilla", params={"division": estructura["div"].pk}).json()["preceptores"] == []
+    otro_curso = Division.objects.create(anio=estructura["a5"], nombre="1ª")
+    otro = _preceptor_del_curso(estructura, "Otra", "50000003")
+    otro.division = otro_curso
+    otro.save()
+    assert api_admin.get("/api/horarios/grilla", params={"division": estructura["div"].pk}).json()["preceptores"] == []
+    assert len(api_admin.get("/api/horarios/grilla", params={"division": otro_curso.pk}).json()["preceptores"]) == 1

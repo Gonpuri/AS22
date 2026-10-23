@@ -69,9 +69,9 @@ export interface LineaDocente {
   sinTitular: boolean
 }
 
-/** Contenido del cartel que aparece al pasar el puntero sobre una materia. */
-export function lineasDocentes(bloque: BloqueGrilla): LineaDocente[] {
-  return bloque.docentes.map((d) => ({
+/** Contenido del cartel de una materia (docentes) o del encabezado (preceptores). */
+export function lineasPersonal(personas: Docente[]): LineaDocente[] {
+  return personas.map((d) => ({
     personalId: d.personal_id,
     nombre: d.nombre,
     situacion: d.situacion_revista,
@@ -80,4 +80,12 @@ export function lineasDocentes(bloque: BloqueGrilla): LineaDocente[] {
       : null,
     sinTitular: d.es_suplente && !d.suplente_de,
   }))
+}
+
+export const lineasDocentes = (bloque: BloqueGrilla): LineaDocente[] => lineasPersonal(bloque.docentes)
+
+/** Nombres para el encabezado: quienes ocupan el cargo; si solo hay suplentes, los suplentes. */
+export function nombresEncabezado(personas: Docente[]): string {
+  const titulares = personas.filter((p) => !p.es_suplente)
+  return (titulares.length ? titulares : personas).map((p) => p.nombre).join(' / ')
 }
