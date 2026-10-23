@@ -97,11 +97,11 @@ watch(divisionId, async (id) => {
 .encabezado { display: flex; gap: 32px; flex-wrap: wrap; margin-bottom: 8px; }
 .titulo { text-align: center; font-size: 1.4rem; letter-spacing: 1px; margin: 8px 0; }
 table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-th, td { border: 1px solid #333; padding: 6px 8px; text-align: center; }
-th { font-weight: 600; background: rgba(128, 128, 128, 0.12); }
+th, td { border: 1px solid rgba(var(--v-theme-on-surface), 0.7); padding: 6px 8px; text-align: center; }
+th { font-weight: 600; background: rgba(var(--v-theme-on-surface), 0.08); }
 td.hora { white-space: nowrap; width: 110px; }
 td.materia { height: 44px; }
 .materia-nombre { cursor: help; display: inline-block; width: 100%; }
-.vacio { padding: 24px; color: gray; }
+.vacio { padding: 24px; opacity: 0.6; }
 .preceptor-nombre { cursor: help; }
 </style>

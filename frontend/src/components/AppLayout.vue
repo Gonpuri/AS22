@@ -3,8 +3,10 @@ import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { auth } from '@/stores/auth'
 import { modulos } from '@/modules'
+import { useModoOscuro } from '@/stores/tema'
 
 const router = useRouter()
+const { oscuro, elegir } = useModoOscuro()
 const visibles = computed(() => modulos.filter((m) => !m.soloAdmin || auth.esAdmin.value))
 
 function salir() {
@@ -30,6 +32,20 @@ function salir() {
   </v-navigation-drawer>
   <v-app-bar flat border>
     <v-app-bar-title>Sistema Escolar</v-app-bar-title>
+    <v-switch
+      :model-value="oscuro"
+      hide-details
+      density="compact"
+      inset
+      class="flex-grow-0 mr-2 palanca-tema"
+      :title="oscuro ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'"
+      aria-label="Modo oscuro"
+      data-test="tema"
+      @update:model-value="elegir"
+    >
+      <template #prepend><v-icon icon="mdi-white-balance-sunny" /></template>
+      <template #append><v-icon icon="mdi-weather-night" /></template>
+    </v-switch>
     <span class="mr-2">{{ auth.estado.usuario?.username }}</span>
     <v-btn icon="mdi-logout" title="Salir" @click="salir" />
   </v-app-bar>
