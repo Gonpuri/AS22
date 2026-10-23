@@ -98,8 +98,20 @@ Sin este paso el navegador bloquea las llamadas del frontend a la API.
        Varios orígenes: separarlos con coma, sin espacios.
   3.3  Guardar. Render redespliega automáticamente.
 
-  Nota: cada despliegue "preview" de Vercel tiene una URL distinta; solo el dominio
-  agregado en CORS_ALLOWED_ORIGINS podrá usar la API.
+  IMPORTANTE: Vercel le da a un mismo proyecto VARIAS direcciones, y la API solo acepta las que
+  figuren en CORS_ALLOWED_ORIGINS. Por ejemplo, para el proyecto "frontend" de la cuenta "gonpuri1":
+      https://frontend-gonpuri1.vercel.app            (la principal)
+      https://frontend-git-main-gonpuri1.vercel.app   (la de la rama main)
+      https://frontend-<código>-gonpuri1.vercel.app   (una distinta en cada despliegue)
+  Si entrás por una que no figura, el login dice "No se pudo conectar con el servidor".
+  Dos formas de resolverlo (se pueden combinar):
+    a) Agregar cada dirección a CORS_ALLOWED_ORIGINS, separadas por coma y sin espacios:
+         https://frontend-gonpuri1.vercel.app,https://frontend-git-main-gonpuri1.vercel.app
+    b) Aceptar todas las del proyecto con una expresión regular, en la variable
+       CORS_ALLOWED_ORIGIN_REGEX (cambiar "gonpuri1" por el nombre de tu cuenta/equipo en Vercel):
+         ^https://frontend(-[a-z0-9-]+)?-gonpuri1\.vercel\.app$
+       Acepta solo direcciones de tu proyecto; no acepta dominios de otras personas.
+  Conviene usar una sola dirección: la principal (https://frontend-gonpuri1.vercel.app).
 
 
 -------------------------------------------------------------------------------
@@ -230,6 +242,7 @@ RESUMEN DE VARIABLES DE ENTORNO
 -------------------------------------------------------------------------------
   Render (API) - editables en el panel:
       CORS_ALLOWED_ORIGINS   URL del frontend en Vercel, sin barra final   (obligatoria)
+      CORS_ALLOWED_ORIGIN_REGEX  opcional: acepta todas las direcciones de tu proyecto de Vercel (paso 3)
       DJANGO_ALLOWED_HOSTS   solo si se usa un dominio propio (opcional)
       ADMIN_USERNAME         usuario del administrador inicial                      (paso 4)
       ADMIN_PASSWORD         su contraseña; se puede borrar después del primer ingreso

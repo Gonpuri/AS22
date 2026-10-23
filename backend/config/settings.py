@@ -3,6 +3,8 @@ from pathlib import Path
 
 import dj_database_url
 
+from .cors import desde_entorno
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "dev-insecure-key-cambiar-en-produccion")
@@ -95,4 +97,5 @@ REST_FRAMEWORK = {
     "TEST_REQUEST_DEFAULT_FORMAT": "json",
 }
 
-CORS_ALLOWED_ORIGINS = [o for o in os.environ.get("CORS_ALLOWED_ORIGINS", "http://localhost:5173").split(",") if o]
+CORS_ALLOWED_ORIGINS, _cors_regex = desde_entorno()
+CORS_ALLOWED_ORIGIN_REGEXES = [_cors_regex] if _cors_regex else []
