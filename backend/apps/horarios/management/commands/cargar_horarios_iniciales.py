@@ -56,14 +56,15 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS(
             f"Horarios iniciales: {resumen['bloques_creados']} bloques creados, "
             f"{resumen['bloques_existentes']} ya existían; "
-            f"{resumen['materias_creadas']} materias y {resumen['divisiones_creadas']} divisiones nuevas."
+            f"{resumen['materias_creadas']} materias y {resumen['divisiones_creadas']} divisiones nuevas; "
+            f"turno completado en {resumen['turnos_completados']} divisiones."
         ))
         for aviso in resumen["omitidos"]:
             self.stdout.write(self.style.WARNING(f"OMITIDO: {aviso}"))
 
     def cargar(self, datos: dict) -> dict:
         resumen = {"materias_creadas": 0, "divisiones_creadas": 0, "bloques_creados": 0,
-                   "bloques_existentes": 0, "omitidos": []}
+                   "bloques_existentes": 0, "turnos_completados": 0, "omitidos": []}
         anio, _ = Anio.objects.get_or_create(numero=datos["anio"])
 
         existentes = {_clave(m.nombre): m for m in Materia.objects.all()}
@@ -81,9 +82,13 @@ class Command(BaseCommand):
             clave = _clave_division(curso["division"])
             division = divisiones.get(clave)
             if division is None:
-                division = Division.objects.create(anio=anio, nombre=curso["division"])
+                division = Division.objects.create(anio=anio, nombre=curso["division"], turno=curso["turno"])
                 divisiones[clave] = division
                 resumen["divisiones_creadas"] += 1
+            elif not division.turno:  # divisiones cargadas antes de existir el turno: se completa, nunca se pisa
+                division.turno = curso["turno"]
+                division.save(update_fields=["turno"])
+                resumen["turnos_completados"] += 1
             for b in curso["bloques"]:
                 materia = materias[b["materia"]]
                 campos = dict(division=division, materia=materia, dia=b["dia"],

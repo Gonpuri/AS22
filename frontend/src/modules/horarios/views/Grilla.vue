@@ -8,7 +8,7 @@ import {
 import CartelPersonal from './CartelPersonal.vue'
 
 interface Grilla {
-  division: { id: number; anio: number; nombre: string; orientacion: string | null }
+  division: { id: number; anio: number; nombre: string; turno?: string; orientacion: string | null }
   preceptores?: Docente[] // ausente si la API aún no se actualizó
   bloques: BloqueGrilla[]
 }
@@ -49,6 +49,7 @@ watch(divisionId, async (id) => {
       <div class="encabezado">
         <span>Curso: <b>{{ grilla.division.anio }}°</b></span>
         <span>División: <b>{{ grilla.division.nombre }}</b></span>
+        <span v-if="grilla.division.turno" data-test="turno">Turno: <b>{{ grilla.division.turno }}</b></span>
         <span v-if="grilla.division.orientacion">Modalidad: <b>{{ grilla.division.orientacion }}</b></span>
         <span data-test="preceptor">
           Preceptor/a:

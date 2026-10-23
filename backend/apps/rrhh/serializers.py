@@ -15,11 +15,16 @@ class PersonalSerializer(serializers.ModelSerializer):
         model = Personal
         fields = [
             "id", "apellido", "nombre", "dni", "cuil", "fecha_nacimiento", "domicilio",
-            "telefono", "email", "fecha_ingreso", "activo", "categorias",
+            "telefono", "email", "fecha_ingreso", "pad", "activo", "categorias",
         ]
 
     def get_categorias(self, obj):
         return sorted({d.categoria for d in obj.designaciones.all()})
+
+    def validate_pad(self, value):
+        if value is not None and value < 0:
+            raise serializers.ValidationError("El PAD no puede ser negativo.")
+        return value
 
     def validate_dni(self, value):
         if not (value.isdigit() and 7 <= len(value) <= 8):

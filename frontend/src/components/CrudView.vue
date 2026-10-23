@@ -70,11 +70,12 @@ function abrir(fila: Registro | null) {
 
 async function guardar() {
   error.value = ''
-  // Una contraseña vacía al editar significa "no cambiarla".
+  // Una contraseña vacía al editar significa "no cambiarla". Un número, fecha u hora que se borró
+  // ('') es "sin valor": el servidor espera null, no una cadena vacía.
   const datos = Object.fromEntries(
-    Object.entries(formulario.value).filter(
-      ([k, v]) => !(props.campos.find((c) => c.clave === k)?.tipo === 'password' && !v),
-    ),
+    Object.entries(formulario.value)
+      .filter(([k, v]) => !(props.campos.find((c) => c.clave === k)?.tipo === 'password' && !v))
+      .map(([k, v]) => [k, v === '' && ['numero', 'fecha', 'hora'].includes(props.campos.find((c) => c.clave === k)?.tipo ?? '') ? null : v]),
   )
   try {
     if (editando.value) await api.actualizar(editando.value.id, datos)
@@ -135,7 +136,7 @@ defineExpose({ cargar })
                 v-else-if="c.tipo === 'select' || c.tipo === 'multiple'"
                 v-model="formulario[c.clave]"
                 :items="c.opciones ?? []"
-                :label="c.etiqueta"
+                :label="c.etiqueta + (c.requerido ? ' *' : '')"
                 :multiple="c.tipo === 'multiple'"
                 :chips="c.tipo === 'multiple'"
                 :clearable="!c.requerido && c.tipo === 'select'"
@@ -145,6 +146,7 @@ defineExpose({ cargar })
                 v-model="formulario[c.clave]"
                 :label="c.etiqueta + (c.requerido && !(c.tipo === 'password' && editando) ? ' *' : '')"
                 :type="tipoInput(c.tipo)"
+                :step="c.tipo === 'numero' ? 'any' : undefined"
                 :placeholder="c.tipo === 'password' && editando ? 'Dejar vacío para no cambiarla' : undefined"
                 :autocomplete="c.tipo === 'password' ? 'new-password' : 'off'"
               />

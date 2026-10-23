@@ -166,4 +166,44 @@ describe('CrudView', () => {
     const clave = [...document.body.querySelectorAll('input')].find((i) => i.type === 'password')!
     expect(clave.getAttribute('autocomplete')).toBe('new-password') // evita que el navegador complete la clave guardada
   })
+
+  it('los campos numéricos admiten decimales y, si se borran, se envían como sin valor (null)', async () => {
+    api.crear.mockResolvedValue({ id: 4 })
+    const vuetify = createVuetify({ components: componentes, directives: directivas })
+    const w = mount(CrudView, {
+      props: {
+        titulo: 'Personal',
+        endpoint: '/api/x',
+        campos: [
+          { clave: 'nombre', etiqueta: 'Nombre' },
+          { clave: 'pad', etiqueta: 'PAD', tipo: 'numero' },
+          { clave: 'nacimiento', etiqueta: 'Nacimiento', tipo: 'fecha' },
+        ],
+      },
+      global: { plugins: [vuetify] },
+      attachTo: document.body,
+    })
+    await flushPromises()
+    await w.find('[data-test="nuevo"]').trigger('click')
+    await flushPromises()
+    const campo = (etiqueta: string) => {
+      const l = [...document.body.querySelectorAll('label')].find((x) => x.htmlFor && x.textContent?.includes(etiqueta))!
+      return document.getElementById(l.htmlFor) as HTMLInputElement
+    }
+    const pad = campo('PAD')
+    expect(pad.getAttribute('step')).toBe('any') // sin esto el navegador rechaza 12,5 al enviar
+    for (const valor of ['12.5', '']) {
+      pad.value = valor
+      pad.dispatchEvent(new Event('input'))
+    }
+    const nacimiento = campo('Nacimiento')
+    nacimiento.value = '1980-05-01'
+    nacimiento.dispatchEvent(new Event('input'))
+    nacimiento.value = ''
+    nacimiento.dispatchEvent(new Event('input'))
+    await flushPromises()
+    ;(document.body.querySelector('#form-crud') as HTMLFormElement).dispatchEvent(new Event('submit', { cancelable: true }))
+    await flushPromises()
+    expect(api.crear).toHaveBeenCalledWith({ nombre: '', pad: null, nacimiento: null })
+  })
 })

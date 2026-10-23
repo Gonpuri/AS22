@@ -332,3 +332,26 @@ def test_eliminar_persona_elimina_sus_cursos_a_cargo(admin_client, ana, estructu
     _a_cargo(admin_client, _preceptor(ana), estructura)
     assert admin_client.delete(f"{PERSONAL}{ana.pk}/").status_code == 204
     assert admin_client.get(PRECEPTORES).data == []
+
+
+# --- PAD (puntaje) ---------------------------------------------------------------------------------
+
+@pytest.mark.parametrize("valor, esperado", [("12.345", "12.345"), (10, "10.000"), ("0", "0.000"), ("7.5", "7.500")])
+def test_pad_con_decimales(admin_client, valor, esperado):
+    r = admin_client.post(PERSONAL, _datos(pad=valor))
+    assert r.status_code == 201, r.data
+    assert r.data["pad"] == esperado
+    assert admin_client.get(f"{PERSONAL}{r.data['id']}/").data["pad"] == esperado
+
+
+def test_pad_es_opcional_y_no_admite_negativos_ni_texto(admin_client):
+    assert admin_client.post(PERSONAL, _datos()).data["pad"] is None
+    assert admin_client.post(PERSONAL, _datos(dni="30999991", pad=None), format="json").status_code == 201
+    assert admin_client.post(PERSONAL, _datos(dni="30999992", pad=-1)).status_code == 400
+    assert admin_client.post(PERSONAL, _datos(dni="30999993", pad="muchos")).status_code == 400
+    assert admin_client.post(PERSONAL, _datos(dni="30999994", pad="1234567")).status_code == 400  # excede 8 dígitos
+
+
+def test_editar_y_borrar_el_pad(admin_client, ana):
+    assert admin_client.patch(f"{PERSONAL}{ana.pk}/", {"pad": "25.5"}).data["pad"] == "25.500"
+    assert admin_client.patch(f"{PERSONAL}{ana.pk}/", {"pad": None}, format="json").data["pad"] is None

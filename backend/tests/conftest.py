@@ -39,7 +39,7 @@ def estructura(db):
     nat = Orientacion.objects.create(nombre="Naturales")
     a4 = Anio.objects.create(numero=4)
     a5 = Anio.objects.create(numero=5)
-    div = Division.objects.create(anio=a4, orientacion=eco, nombre="1ª")
+    div = Division.objects.create(anio=a4, orientacion=eco, nombre="1ª", turno="tarde")
     matematica = Materia.objects.create(nombre="Matemática")
     matematica.anios.add(a4, a5)
     contabilidad = Materia.objects.create(nombre="Contabilidad")

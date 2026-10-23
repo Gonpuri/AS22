@@ -184,7 +184,8 @@ base de Render durante un despliegue, solo si se pide con una variable:
   4. Borrar la variable CARGAR_HORARIOS_INICIALES para que no se vuelva a ejecutar en cada despliegue
      (volvería a crear los bloques que hayas borrado a propósito).
 
-La carga es segura de repetir: no duplica año, divisiones, materias ni bloques. Crea el año 1, las
+La carga es segura de repetir: no duplica año, divisiones, materias ni bloques. También completa el TURNO
+(mañana/tarde) de las divisiones 2ª a 6ª que ya existan sin turno, sin pisar uno ya cargado. Crea el año 1, las
 divisiones 2ª a 6ª (sin orientación: ciclo básico) y las materias Matemática, Inglés, Prácticas del
 lenguaje, Ciencias Naturales, Ciencias Sociales, Educación Artística, Construcción de la ciudadanía y
 Educación Física. Si ya tenías una materia con otro nombre (p. ej. "Cs Naturales"), se reutiliza.

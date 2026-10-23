@@ -42,6 +42,7 @@ class DivisionOut(BaseModel):
     id: int
     anio: int
     nombre: str
+    turno: str
     orientacion: str | None
 
 

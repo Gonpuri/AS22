@@ -1,6 +1,12 @@
 from django.db import models
 
 
+class Turno(models.TextChoices):
+    MANANA = "manana", "Mañana"
+    TARDE = "tarde", "Tarde"
+    VESPERTINO = "vespertino", "Vespertino"
+
+
 class Orientacion(models.Model):
     nombre = models.CharField(max_length=100, unique=True)
 
@@ -31,6 +37,10 @@ class Division(models.Model):
         Orientacion, null=True, blank=True, on_delete=models.PROTECT, related_name="divisiones"
     )
     nombre = models.CharField(max_length=20)
+    turno = models.CharField(
+        max_length=20, choices=Turno.choices, blank=True,
+        help_text="Turno en que cursa. Se exige al guardar por la API; puede quedar vacío en divisiones anteriores.",
+    )
 
     class Meta:
         ordering = ["anio__numero", "nombre"]

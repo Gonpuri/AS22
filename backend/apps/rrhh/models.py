@@ -1,7 +1,7 @@
 from django.core.exceptions import ValidationError
 from django.db import models
 
-from apps.academico.models import Division, Materia
+from apps.academico.models import Division, Materia, Turno
 
 
 class Personal(models.Model):
@@ -14,6 +14,10 @@ class Personal(models.Model):
     telefono = models.CharField(max_length=30, blank=True)
     email = models.EmailField(blank=True)
     fecha_ingreso = models.DateField(null=True, blank=True)
+    pad = models.DecimalField(
+        "PAD", max_digits=8, decimal_places=3, null=True, blank=True,
+        help_text="Puntaje del docente; se usa para ordenarlos (a mayor puntaje, mejor posición).",
+    )
     activo = models.BooleanField(default=True)
 
     class Meta:
@@ -36,10 +40,7 @@ class Designacion(models.Model):
         EMATP = "ematp", "EMATP"
         OTRO = "otro", "Otro"
 
-    class Turno(models.TextChoices):
-        MANANA = "manana", "Mañana"
-        TARDE = "tarde", "Tarde"
-        VESPERTINO = "vespertino", "Vespertino"
+    Turno = Turno  # los mismos turnos que los de los cursos (apps.academico.models.Turno)
 
     class SituacionRevista(models.TextChoices):
         TITULAR = "titular", "Titular"

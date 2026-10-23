@@ -133,3 +133,20 @@ def test_la_grilla_muestra_lo_cargado(capsys):
     )
     assert r.status_code == 200 and len(r.json()["bloques"]) == 24
     assert r.json()["division"]["anio"] == 1 and r.json()["division"]["orientacion"] is None
+
+
+def test_los_cursos_quedan_con_el_turno_del_excel(capsys):
+    _cargar(capsys)
+    turnos = dict(Division.objects.values_list("nombre", "turno"))
+    assert turnos == {"2ª": "manana", "3ª": "tarde", "4ª": "tarde", "5ª": "tarde", "6ª": "manana"}
+
+
+def test_completa_el_turno_de_divisiones_existentes_sin_pisar_el_que_ya_tienen(capsys):
+    anio = Anio.objects.create(numero=1)
+    sin_turno = Division.objects.create(anio=anio, nombre="2")
+    con_turno = Division.objects.create(anio=anio, nombre="3", turno="vespertino")
+    salida = _cargar(capsys)
+    sin_turno.refresh_from_db()
+    con_turno.refresh_from_db()
+    assert sin_turno.turno == "manana" and con_turno.turno == "vespertino"
+    assert "turno completado en 1 divisiones" in salida

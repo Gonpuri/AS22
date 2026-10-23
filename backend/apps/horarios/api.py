@@ -98,7 +98,7 @@ def grilla(division: int, _=Depends(usuario_actual)):
     return GrillaOut(
         preceptores=preceptores,
         division=DivisionOut(
-            id=div.id, anio=div.anio.numero, nombre=div.nombre,
+            id=div.id, anio=div.anio.numero, nombre=div.nombre, turno=div.get_turno_display(),
             orientacion=div.orientacion.nombre if div.orientacion else None,
         ),
         bloques=[

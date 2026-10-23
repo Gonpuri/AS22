@@ -15,8 +15,8 @@ class AnioAdmin(admin.ModelAdmin):
 
 @admin.register(Division)
 class DivisionAdmin(admin.ModelAdmin):
-    list_display = ["__str__", "anio", "orientacion"]
-    list_filter = ["anio", "orientacion"]
+    list_display = ["__str__", "anio", "orientacion", "turno"]
+    list_filter = ["anio", "orientacion", "turno"]
     search_fields = ["nombre"]
 
 

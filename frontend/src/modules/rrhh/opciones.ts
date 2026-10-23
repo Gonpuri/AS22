@@ -6,11 +6,8 @@ export const categorias = [
   { value: 'otro', title: 'Otro' },
 ]
 
-export const turnos = [
-  { value: 'manana', title: 'Mañana' },
-  { value: 'tarde', title: 'Tarde' },
-  { value: 'vespertino', title: 'Vespertino' },
-]
+// Los mismos turnos que los de los cursos.
+export { turnos } from '../academico/opciones'
 
 export const situacionesRevista = [
   { value: 'titular', title: 'Titular' },

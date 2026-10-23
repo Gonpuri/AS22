@@ -25,10 +25,12 @@ class DivisionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Division
-        fields = ["id", "anio", "orientacion", "nombre", "etiqueta"]
+        fields = ["id", "anio", "orientacion", "nombre", "turno", "etiqueta"]
         validators = []  # la unicidad (anio, nombre) se valida abajo con mensaje en español
 
     def validate(self, attrs):
+        if not attrs.get("turno", getattr(self.instance, "turno", "")):
+            raise serializers.ValidationError({"turno": "El turno es obligatorio."})
         anio = attrs.get("anio", getattr(self.instance, "anio", None))
         nombre = attrs.get("nombre", getattr(self.instance, "nombre", None))
         repetida = Division.objects.filter(anio=anio, nombre=nombre)

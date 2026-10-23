@@ -2,6 +2,7 @@
 import CrudView from '@/components/CrudView.vue'
 import type { Campo } from '@/components/campos'
 import { categorias } from '../opciones'
+import { formatoPad } from '../ficha'
 
 const nombreCategoria = (c: string) => categorias.find((x) => x.value === c)?.title ?? c
 
@@ -21,6 +22,7 @@ const campos: Campo[] = [
   { clave: 'telefono', etiqueta: 'Teléfono' },
   { clave: 'email', etiqueta: 'Email', tipo: 'email' },
   { clave: 'fecha_ingreso', etiqueta: 'Fecha de ingreso', tipo: 'fecha', soloFormulario: true },
+  { clave: 'pad', etiqueta: 'PAD', tipo: 'numero', formato: (v) => formatoPad(v) },
   { clave: 'activo', etiqueta: 'Activo', tipo: 'checkbox' },
 ]
 </script>

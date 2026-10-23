@@ -11,6 +11,7 @@ export interface Persona {
   telefono: string
   email: string
   fecha_ingreso: string | null
+  pad: string | null
   activo: boolean
 }
 
@@ -34,6 +35,12 @@ export function fecha(iso: string | null): string {
 
 const dato = (valor: string) => valor || '-'
 
+/** PAD en formato local ("12,345"); sin valor, un guion. */
+export function formatoPad(pad: string | number | null | undefined): string {
+  if (pad === null || pad === undefined || pad === '') return '-'
+  return Number(pad).toLocaleString('es-AR', { maximumFractionDigits: 3 })
+}
+
 /** Datos personales en el orden en que se muestran en la ficha. */
 export function datosPersonales(p: Persona): { etiqueta: string; valor: string }[] {
   return [
@@ -46,6 +53,7 @@ export function datosPersonales(p: Persona): { etiqueta: string; valor: string }
     { etiqueta: 'Teléfono', valor: dato(p.telefono) },
     { etiqueta: 'Email', valor: dato(p.email) },
     { etiqueta: 'Fecha de ingreso', valor: fecha(p.fecha_ingreso) },
+    { etiqueta: 'PAD', valor: formatoPad(p.pad) },
     { etiqueta: 'Activo', valor: p.activo ? 'Sí' : 'No' },
   ]
 }

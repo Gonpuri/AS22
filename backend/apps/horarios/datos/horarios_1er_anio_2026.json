@@ -12,7 +12,7 @@
   {"nombre": "Educación Física", "alias": ["Ed Fisica", "Educ Fisica"]}
  ],
  "cursos": [
-  {"division": "2ª", "bloques": [
+  {"division": "2ª", "turno": "manana", "bloques": [
     {"dia": 1, "inicio": "07:30", "fin": "08:30", "materia": "Matemática"},
     {"dia": 1, "inicio": "08:30", "fin": "09:30", "materia": "Matemática"},
     {"dia": 1, "inicio": "09:40", "fin": "10:40", "materia": "Prácticas del lenguaje"},
@@ -38,7 +38,7 @@
     {"dia": 5, "inicio": "10:45", "fin": "11:45", "materia": "Ciencias Sociales"},
     {"dia": 5, "inicio": "11:45", "fin": "12:45", "materia": "Educación Física"}
   ]},
-  {"division": "3ª", "bloques": [
+  {"division": "3ª", "turno": "tarde", "bloques": [
     {"dia": 1, "inicio": "13:00", "fin": "14:00", "materia": "Ciencias Sociales"},
     {"dia": 1, "inicio": "14:00", "fin": "15:00", "materia": "Ciencias Sociales"},
     {"dia": 1, "inicio": "15:10", "fin": "16:10", "materia": "Prácticas del lenguaje"},
@@ -64,7 +64,7 @@
     {"dia": 5, "inicio": "15:10", "fin": "16:10", "materia": "Educación Artística"},
     {"dia": 5, "inicio": "16:15", "fin": "17:15", "materia": "Educación Artística"}
   ]},
-  {"division": "4ª", "bloques": [
+  {"division": "4ª", "turno": "tarde", "bloques": [
     {"dia": 1, "inicio": "13:00", "fin": "14:00", "materia": "Inglés"},
     {"dia": 1, "inicio": "14:00", "fin": "15:00", "materia": "Inglés"},
     {"dia": 1, "inicio": "15:10", "fin": "16:10", "materia": "Ciencias Naturales"},
@@ -90,7 +90,7 @@
     {"dia": 5, "inicio": "15:10", "fin": "16:10", "materia": "Ciencias Sociales"},
     {"dia": 5, "inicio": "16:15", "fin": "17:15", "materia": "Ciencias Sociales"}
   ]},
-  {"division": "5ª", "bloques": [
+  {"division": "5ª", "turno": "tarde", "bloques": [
     {"dia": 1, "inicio": "13:00", "fin": "14:00", "materia": "Ciencias Naturales"},
     {"dia": 1, "inicio": "14:00", "fin": "15:00", "materia": "Ciencias Naturales"},
     {"dia": 1, "inicio": "15:10", "fin": "16:10", "materia": "Matemática"},
@@ -116,7 +116,7 @@
     {"dia": 5, "inicio": "15:10", "fin": "16:10", "materia": "Prácticas del lenguaje"},
     {"dia": 5, "inicio": "16:15", "fin": "17:15", "materia": "Prácticas del lenguaje"}
   ]},
-  {"division": "6ª", "bloques": [
+  {"division": "6ª", "turno": "manana", "bloques": [
     {"dia": 1, "inicio": "07:30", "fin": "08:30", "materia": "Prácticas del lenguaje"},
     {"dia": 1, "inicio": "08:30", "fin": "09:30", "materia": "Prácticas del lenguaje"},
     {"dia": 1, "inicio": "09:40", "fin": "10:40", "materia": "Ciencias Sociales"},

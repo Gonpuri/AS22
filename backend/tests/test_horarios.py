@@ -113,7 +113,7 @@ def test_grilla_muestra_al_suplente_con_el_docente_que_reemplaza(api_admin, estr
     r = api_admin.get("/api/horarios/grilla", params={"division": estructura["div"].pk})
     assert r.status_code == 200
     datos = r.json()
-    assert datos["division"] == {"id": estructura["div"].pk, "anio": 4, "nombre": "1ª", "orientacion": "Economía"}
+    assert datos["division"] == {"id": estructura["div"].pk, "anio": 4, "nombre": "1ª", "turno": "Tarde", "orientacion": "Economía"}
     por_materia = {b["materia"]: b for b in datos["bloques"]}
     assert por_materia["Matemática"]["docentes"] == [
         {"personal_id": titular.designacion.personal_id, "nombre": "Nievas, Ana",

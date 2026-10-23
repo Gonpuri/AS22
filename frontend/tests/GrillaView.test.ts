@@ -35,13 +35,14 @@ describe('Grilla de horarios', () => {
 
   it('muestra encabezado, días, franjas y materias como el horario en papel', async () => {
     responder({
-      division: { id: 7, anio: 4, nombre: '1ª', orientacion: 'Comunicación' },
+      division: { id: 7, anio: 4, nombre: '1ª', turno: 'Tarde', orientacion: 'Comunicación' },
       bloques: [bloque(1, 1, '13:00:00', '14:00:00', 'Matemática'), bloque(2, 2, '13:00:00', '14:00:00', 'Inglés')],
     })
     const w = await montarYElegir()
     const texto = w.text()
     expect(texto).toContain('Curso: 4°')
     expect(texto).toContain('División: 1ª')
+    expect(texto).toContain('Turno: Tarde')
     expect(texto).toContain('Modalidad: Comunicación')
     expect(texto).toContain('HORARIO')
     for (const dia of ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes']) expect(texto).toContain(dia)

@@ -26,18 +26,18 @@ def test_anio_crud_y_validacion(admin_client):
 
 
 def test_division_con_y_sin_orientacion(admin_client, estructura):
-    r = admin_client.post(f"{BASE}/divisiones/", {"anio": estructura["a5"].pk, "nombre": "1ª"})
+    r = admin_client.post(f"{BASE}/divisiones/", {"anio": estructura["a5"].pk, "nombre": "1ª", "turno": "manana"})
     assert r.status_code == 201 and r.data["orientacion"] is None and r.data["etiqueta"] == "5° 1ª"
     r = admin_client.post(
         f"{BASE}/divisiones/",
-        {"anio": estructura["a5"].pk, "orientacion": estructura["nat"].pk, "nombre": "2ª"},
+        {"anio": estructura["a5"].pk, "orientacion": estructura["nat"].pk, "nombre": "2ª", "turno": "tarde"},
     )
     assert r.status_code == 201
 
 
 def test_division_repetida_en_el_anio(admin_client, estructura):
-    r = admin_client.post(f"{BASE}/divisiones/", {"anio": estructura["a4"].pk, "nombre": "1ª"})
-    assert r.status_code == 400
+    r = admin_client.post(f"{BASE}/divisiones/", {"anio": estructura["a4"].pk, "nombre": "1ª", "turno": "tarde"})
+    assert r.status_code == 400 and "Ya existe" in str(r.data)
 
 
 def test_materia_asociada_a_anios_y_orientaciones(admin_client, estructura):
@@ -73,3 +73,34 @@ def test_eliminar_division_y_materia(admin_client, estructura):
     assert admin_client.delete(f"{BASE}/materias/{estructura['historia'].pk}/").status_code == 204
     assert not Division.objects.exists() and not Materia.objects.filter(nombre="Historia").exists()
     assert Orientacion.objects.count() == 2
+
+
+# --- Turno de los cursos ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize("turno", ["manana", "tarde", "vespertino"])
+def test_division_con_turno(admin_client, estructura, turno):
+    r = admin_client.post(f"{BASE}/divisiones/", {"anio": estructura["a5"].pk, "nombre": "9ª", "turno": turno})
+    assert r.status_code == 201 and r.data["turno"] == turno
+
+
+def test_el_turno_de_la_division_es_obligatorio_y_valido(admin_client, estructura):
+    base = {"anio": estructura["a5"].pk, "nombre": "9ª"}
+    r = admin_client.post(f"{BASE}/divisiones/", base)
+    assert r.status_code == 400 and "turno" in r.data
+    assert admin_client.post(f"{BASE}/divisiones/", {**base, "turno": ""}).status_code == 400
+    assert admin_client.post(f"{BASE}/divisiones/", {**base, "turno": "noche"}).status_code == 400
+
+
+def test_editar_el_turno_y_completar_divisiones_anteriores(admin_client, estructura):
+    pk = estructura["div"].pk
+    assert admin_client.patch(f"{BASE}/divisiones/{pk}/", {"turno": "manana"}).data["turno"] == "manana"
+    assert admin_client.patch(f"{BASE}/divisiones/{pk}/", {"nombre": "7ª"}).status_code == 200  # conserva el turno
+    # una división cargada antes de existir el turno (vacío) pide completarlo al editarla
+    Division.objects.filter(pk=pk).update(turno="")
+    assert admin_client.patch(f"{BASE}/divisiones/{pk}/", {"nombre": "8ª"}).status_code == 400
+    assert admin_client.patch(f"{BASE}/divisiones/{pk}/", {"nombre": "8ª", "turno": "tarde"}).status_code == 200
+
+
+def test_el_listado_de_divisiones_incluye_el_turno(common_client, estructura):
+    fila = common_client.get(f"{BASE}/divisiones/").data[0]
+    assert fila["turno"] == "tarde"
