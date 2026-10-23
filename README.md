@@ -22,6 +22,8 @@ Aplicación web modular para una escuela secundaria de la Provincia de Buenos Ai
 ### Reglas de negocio
 - Una **persona** puede tener varias **designaciones** (categoría + turno: mañana, tarde o vespertino), p. ej. preceptor a la mañana y profesor a la tarde. Cada designación tiene su **situación de revista** (titular, titular interino, suplente o provisional). No se repite la misma categoría en el mismo turno.
 - Una designación de **profesor o EMATP** puede tener varias **asignaciones** (división + materia): distintos cursos y distintas materias. La materia debe corresponder a la división.
+- Una asignación de un **suplente** debe indicar a quién reemplaza (`suplente_de`): otra asignación del **mismo curso y materia** cuyo docente sea titular, titular interino o provisional (no otro suplente ni él mismo). No se puede borrar a quien tiene suplentes.
+- En el **horario por curso**, al pasar el puntero (o hacer clic) sobre una materia se ven los docentes con su situación de revista y, para el suplente, a quién reemplaza. Cada nombre es un enlace a la **ficha personal** (`/rrhh/personal/:id`) con sus datos y designaciones.
 - Una **división** pertenece a un año y, opcionalmente, a una orientación.
 - Las **materias de una división** son las asociadas a su año y, si la materia está asociada a orientaciones, solo si incluye la de la división. Una materia sin orientaciones vale para todas las del año.
 - Un **bloque horario** exige: materia de la división, fin posterior al inicio y sin superposición con otro bloque de la misma división el mismo día (lunes a viernes).

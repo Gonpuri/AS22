@@ -47,13 +47,24 @@ class DesignacionSerializer(serializers.ModelSerializer):
         if self.instance and categoria not in AsignacionDocente.CATEGORIAS_DOCENTES \
                 and self.instance.asignaciones.exists():
             raise serializers.ValidationError("La designación tiene cursos y materias asignados.")
+        if self.instance:
+            es_suplente = _valor(self, attrs, "situacion_revista") == Designacion.SituacionRevista.SUPLENTE
+            if not es_suplente and self.instance.asignaciones.filter(suplente_de__isnull=False).exists():
+                raise serializers.ValidationError(
+                    "Tiene asignaciones que reemplazan a otro docente: quitá el reemplazo primero."
+                )
+            if es_suplente and AsignacionDocente.objects.filter(suplente_de__designacion=self.instance).exists():
+                raise serializers.ValidationError("Tiene suplentes asignados: no puede pasar a ser suplente.")
         return attrs
 
 
 class AsignacionDocenteSerializer(serializers.ModelSerializer):
+    etiqueta = serializers.CharField(source="__str__", read_only=True)
+    situacion_revista = serializers.CharField(source="designacion.situacion_revista", read_only=True)
+
     class Meta:
         model = AsignacionDocente
-        fields = ["id", "designacion", "division", "materia"]
+        fields = ["id", "designacion", "division", "materia", "suplente_de", "etiqueta", "situacion_revista"]
         validators = []
 
     def validate(self, attrs):
@@ -61,6 +72,7 @@ class AsignacionDocenteSerializer(serializers.ModelSerializer):
             designacion=_valor(self, attrs, "designacion"),
             division=_valor(self, attrs, "division"),
             materia=_valor(self, attrs, "materia"),
+            suplente_de=_valor(self, attrs, "suplente_de"),
         )
         repetida = AsignacionDocente.objects.filter(
             designacion=asignacion.designacion, division=asignacion.division, materia=asignacion.materia

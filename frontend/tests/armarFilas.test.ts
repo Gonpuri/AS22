@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { armarFilas, lineasDocentes, type BloqueGrilla, type Docente } from '@/modules/horarios/grilla'
+import { armarFilas, lineasDocentes, rutaFicha, type BloqueGrilla, type Docente } from '@/modules/horarios/grilla'
 
 const bloque = (id: number, dia: number, inicio: string, fin: string, materia: string, docentes: Docente[] = []): BloqueGrilla => ({
   id, dia, hora_inicio: inicio, hora_fin: fin, materia, docentes,
@@ -31,15 +31,38 @@ describe('armarFilas', () => {
 })
 
 describe('lineasDocentes', () => {
-  it('muestra cada docente con su situación de revista', () => {
-    const b = bloque(1, 1, '13:00:00', '14:00:00', 'Literatura', [
-      { nombre: 'Iraola, Cecilia', situacion_revista: 'Titular' },
-      { nombre: 'Ramírez, Priscila', situacion_revista: 'Suplente' },
+  const titular: Docente = {
+    personal_id: 1, nombre: 'Iraola, Cecilia', situacion_revista: 'Titular interino', es_suplente: false, suplente_de: null,
+  }
+  const suplente: Docente = {
+    personal_id: 2, nombre: 'Ramírez, Priscila', situacion_revista: 'Suplente', es_suplente: true,
+    suplente_de: { personal_id: 1, nombre: 'Iraola, Cecilia', situacion_revista: 'Titular interino' },
+  }
+
+  it('el titular y el suplente, este último con a quién reemplaza', () => {
+    const lineas = lineasDocentes(bloque(1, 1, '13:00:00', '14:00:00', 'Literatura', [titular, suplente]))
+    expect(lineas).toEqual([
+      { personalId: 1, nombre: 'Iraola, Cecilia', situacion: 'Titular interino', reemplaza: null, sinTitular: false },
+      {
+        personalId: 2, nombre: 'Ramírez, Priscila', situacion: 'Suplente', sinTitular: false,
+        reemplaza: { personalId: 1, nombre: 'Iraola, Cecilia', situacion: 'Titular interino' },
+      },
     ])
-    expect(lineasDocentes(b)).toEqual(['Iraola, Cecilia (Titular)', 'Ramírez, Priscila (Suplente)'])
   })
 
-  it('avisa si no hay docente asignado', () => {
-    expect(lineasDocentes(bloque(1, 1, '13:00:00', '14:00:00', 'Arte'))).toEqual(['Sin docente asignado'])
+  it('marca al suplente cargado sin indicar a quién reemplaza', () => {
+    const lineas = lineasDocentes(bloque(1, 1, '13:00:00', '14:00:00', 'Arte', [{ ...suplente, suplente_de: null }]))
+    expect(lineas[0].sinTitular).toBe(true)
+    expect(lineas[0].reemplaza).toBeNull()
+  })
+
+  it('sin docentes no hay líneas', () => {
+    expect(lineasDocentes(bloque(1, 1, '13:00:00', '14:00:00', 'Arte'))).toEqual([])
+  })
+})
+
+describe('rutaFicha', () => {
+  it('lleva a los datos personales del docente', () => {
+    expect(rutaFicha(7)).toBe('/rrhh/personal/7')
   })
 })

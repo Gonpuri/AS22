@@ -3,10 +3,10 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 
 from apps.academico.models import Division, Materia
 from apps.core.fastapi_auth import administrador, usuario_actual
-from apps.rrhh.models import AsignacionDocente
+from apps.rrhh.models import AsignacionDocente, Designacion
 
 from .models import BloqueHorario
-from .schemas import BloqueGrilla, BloqueIn, BloqueOut, DivisionOut, DocenteOut, GrillaOut
+from .schemas import BloqueGrilla, BloqueIn, BloqueOut, DivisionOut, DocenteOut, GrillaOut, ReemplazoOut
 from .services import ErrorHorario, validar_bloque
 
 router = APIRouter(tags=["horarios"])
@@ -59,12 +59,24 @@ def grilla(division: int, _=Depends(usuario_actual)):
     if div is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "División inexistente.")
     docentes: dict[int, list[DocenteOut]] = {}
-    asignaciones = AsignacionDocente.objects.filter(division=div).select_related("designacion__personal")
+    asignaciones = AsignacionDocente.objects.filter(division=div).select_related(
+        "designacion__personal", "suplente_de__designacion__personal"
+    )
     for a in asignaciones:
+        reemplazado = a.suplente_de.designacion if a.suplente_de else None
         docentes.setdefault(a.materia_id, []).append(DocenteOut(
+            personal_id=a.designacion.personal_id,
             nombre=str(a.designacion.personal),
             situacion_revista=a.designacion.get_situacion_revista_display(),
+            es_suplente=a.designacion.situacion_revista == Designacion.SituacionRevista.SUPLENTE,
+            suplente_de=ReemplazoOut(
+                personal_id=reemplazado.personal_id,
+                nombre=str(reemplazado.personal),
+                situacion_revista=reemplazado.get_situacion_revista_display(),
+            ) if reemplazado else None,
         ))
+    for lista in docentes.values():
+        lista.sort(key=lambda d: (d.es_suplente, d.nombre))  # primero quienes ocupan el cargo, después los suplentes
     bloques = BloqueHorario.objects.filter(division=div).select_related("materia")
     return GrillaOut(
         division=DivisionOut(

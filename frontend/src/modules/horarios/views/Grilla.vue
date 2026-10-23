@@ -2,7 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import { http, mensajeError } from '@/api/http'
 import { useOpciones } from '@/api/opciones'
-import { armarFilas, DIAS, lineasDocentes, type BloqueGrilla } from '../grilla'
+import { armarFilas, DIAS, lineasDocentes, rutaFicha, type BloqueGrilla } from '../grilla'
 
 interface Grilla {
   division: { id: number; anio: number; nombre: string; orientacion: string | null }
@@ -61,12 +61,26 @@ watch(divisionId, async (id) => {
           <tr v-for="f in filas" :key="f.etiqueta">
             <td class="hora">{{ f.etiqueta }}</td>
             <td v-for="d in DIAS" :key="d.numero" class="materia">
-              <v-tooltip v-if="f.celdas[d.numero]" location="top">
+              <!-- v-menu en vez de v-tooltip: al pasar el puntero muestra los docentes y no se cierra
+                   al moverse hacia los nombres, que son enlaces a la ficha personal. -->
+              <v-menu v-if="f.celdas[d.numero]" open-on-hover open-on-click :close-delay="200" location="top">
                 <template #activator="{ props }">
                   <span v-bind="props" class="materia-nombre" data-test="materia">{{ f.celdas[d.numero]!.materia }}</span>
                 </template>
-                <div v-for="linea in lineasDocentes(f.celdas[d.numero]!)" :key="linea">{{ linea }}</div>
-              </v-tooltip>
+                <v-card class="pa-3 docentes" data-test="docentes">
+                  <div v-if="!f.celdas[d.numero]!.docentes.length">Sin docente asignado</div>
+                  <div v-for="l in lineasDocentes(f.celdas[d.numero]!)" :key="`${l.personalId}-${l.reemplaza?.personalId}`" class="docente">
+                    <router-link :to="rutaFicha(l.personalId)" data-test="docente">{{ l.nombre }}</router-link>
+                    <span> ({{ l.situacion }})</span>
+                    <template v-if="l.reemplaza">
+                      <span class="text-medium-emphasis"> · suplente de </span>
+                      <router-link :to="rutaFicha(l.reemplaza.personalId)" data-test="reemplazado">{{ l.reemplaza.nombre }}</router-link>
+                      <span> ({{ l.reemplaza.situacion }})</span>
+                    </template>
+                    <span v-else-if="l.sinTitular" class="text-medium-emphasis"> · sin titular indicado</span>
+                  </div>
+                </v-card>
+              </v-menu>
             </td>
           </tr>
         </tbody>
@@ -86,4 +100,6 @@ td.hora { white-space: nowrap; width: 110px; }
 td.materia { height: 44px; }
 .materia-nombre { cursor: help; display: inline-block; width: 100%; }
 .vacio { padding: 24px; color: gray; }
+.docentes { min-width: 260px; }
+.docente + .docente { margin-top: 6px; }
 </style>

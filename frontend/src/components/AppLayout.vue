@@ -19,7 +19,7 @@ function salir() {
       <template v-for="m in visibles" :key="m.nombre">
         <v-list-subheader>{{ m.etiqueta }}</v-list-subheader>
         <v-list-item
-          v-for="r in m.rutas"
+          v-for="r in m.rutas.filter((x) => !x.oculta)"
           :key="r.path"
           :to="`/${m.nombre}/${r.path}`"
           :prepend-icon="m.icono"

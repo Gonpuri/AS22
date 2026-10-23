@@ -7,6 +7,7 @@ const modulo: ModuloFrontend = {
   orden: 30,
   rutas: [
     { path: 'personal', etiqueta: 'Personal', component: () => import('./views/Personal.vue') },
+    { path: 'personal/:id', etiqueta: 'Ficha personal', component: () => import('./views/FichaPersonal.vue'), oculta: true },
     { path: 'designaciones', etiqueta: 'Designaciones', component: () => import('./views/Designaciones.vue') },
     { path: 'asignaciones', etiqueta: 'Cursos y materias', component: () => import('./views/Asignaciones.vue') },
   ],

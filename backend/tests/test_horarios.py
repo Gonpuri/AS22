@@ -96,28 +96,44 @@ def test_django_se_sirve_desde_la_misma_app(admin_user):
     assert r.status_code == 200 and "token" in r.json()
 
 
-def _docente(estructura, materia, apellido, dni, situacion="titular"):
+def _docente(estructura, materia, apellido, dni, situacion="titular", suplente_de=None):
     from apps.rrhh.models import AsignacionDocente, Designacion, Personal
     persona = Personal.objects.create(apellido=apellido, nombre="Ana", dni=dni)
     des = Designacion.objects.create(personal=persona, categoria="profesor", turno="tarde", situacion_revista=situacion)
-    AsignacionDocente.objects.create(designacion=des, division=estructura["div"], materia=estructura[materia])
+    return AsignacionDocente.objects.create(
+        designacion=des, division=estructura["div"], materia=estructura[materia], suplente_de=suplente_de
+    )
 
 
-def test_grilla_con_docentes_titular_y_suplente(api_admin, estructura):
+def test_grilla_muestra_al_suplente_con_el_docente_que_reemplaza(api_admin, estructura):
     api_admin.post(URL, json=_bloque(estructura))
     api_admin.post(URL, json=_bloque(estructura, materia="contabilidad", dia=2))
-    _docente(estructura, "matematica", "Nievas", "30000001")
-    _docente(estructura, "matematica", "Ramírez", "30000002", situacion="suplente")
+    titular = _docente(estructura, "matematica", "Nievas", "30000001", situacion="titular_interino")
+    suplente = _docente(estructura, "matematica", "Ramírez", "30000002", situacion="suplente", suplente_de=titular)
     r = api_admin.get("/api/horarios/grilla", params={"division": estructura["div"].pk})
     assert r.status_code == 200
     datos = r.json()
     assert datos["division"] == {"id": estructura["div"].pk, "anio": 4, "nombre": "1ª", "orientacion": "Economía"}
     por_materia = {b["materia"]: b for b in datos["bloques"]}
     assert por_materia["Matemática"]["docentes"] == [
-        {"nombre": "Nievas, Ana", "situacion_revista": "Titular"},
-        {"nombre": "Ramírez, Ana", "situacion_revista": "Suplente"},
+        {"personal_id": titular.designacion.personal_id, "nombre": "Nievas, Ana",
+         "situacion_revista": "Titular interino", "es_suplente": False, "suplente_de": None},
+        {"personal_id": suplente.designacion.personal_id, "nombre": "Ramírez, Ana",
+         "situacion_revista": "Suplente", "es_suplente": True,
+         "suplente_de": {"personal_id": titular.designacion.personal_id, "nombre": "Nievas, Ana",
+                         "situacion_revista": "Titular interino"}},
     ]
     assert por_materia["Contabilidad"]["docentes"] == []
+
+
+def test_grilla_suplente_sin_titular_indicado_y_orden(api_admin, estructura):
+    api_admin.post(URL, json=_bloque(estructura))
+    _docente(estructura, "matematica", "Aaa", "30000003", situacion="suplente")  # dato anterior a la regla
+    _docente(estructura, "matematica", "Zzz", "30000004", situacion="titular")
+    bloque = api_admin.get("/api/horarios/grilla", params={"division": estructura["div"].pk}).json()["bloques"][0]
+    docentes = bloque["docentes"]
+    assert [d["nombre"] for d in docentes] == ["Zzz, Ana", "Aaa, Ana"]  # los suplentes van después
+    assert docentes[1]["es_suplente"] is True and docentes[1]["suplente_de"] is None
 
 
 def test_grilla_division_inexistente_y_sin_login(api_admin, estructura):

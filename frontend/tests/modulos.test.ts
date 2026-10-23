@@ -27,7 +27,13 @@ describe('registro de módulos', () => {
 
   it('RR. HH. expone personal, designaciones y cursos/materias de docentes', () => {
     const rrhh = modulos.find((m) => m.nombre === 'rrhh')!
-    expect(rrhh.rutas.map((r) => r.path)).toEqual(['personal', 'designaciones', 'asignaciones'])
+    expect(rrhh.rutas.map((r) => r.path)).toEqual(['personal', 'personal/:id', 'designaciones', 'asignaciones'])
+  })
+
+  it('la ficha personal existe como ruta pero no aparece en el menú', () => {
+    const ficha = modulos.find((m) => m.nombre === 'rrhh')!.rutas.find((r) => r.path === 'personal/:id')!
+    expect(ficha.oculta).toBe(true)
+    expect(modulos.flatMap((m) => m.rutas).filter((r) => r.oculta)).toHaveLength(1)
   })
 
   it('cada ruta tiene componente', () => {

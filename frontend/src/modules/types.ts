@@ -8,5 +8,11 @@ export interface ModuloFrontend {
   soloAdmin?: boolean
   orden: number
   /** Rutas hijas del layout principal; los paths son relativos (sin barra inicial). */
-  rutas: { path: string; etiqueta: string; component: RouteRecordRaw['component'] }[]
+  rutas: {
+    path: string
+    etiqueta: string
+    component: RouteRecordRaw['component']
+    /** Ruta con parámetros o de detalle: existe en el router pero no aparece en el menú. */
+    oculta?: boolean
+  }[]
 }

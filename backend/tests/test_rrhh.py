@@ -167,3 +167,83 @@ def test_misma_persona_distinta_situacion_segun_turno(admin_client, ana):
     assert admin_client.post(DESIGNACIONES, {**base, "turno": "manana", "situacion_revista": "titular"}).status_code == 201
     assert admin_client.post(DESIGNACIONES, {**base, "turno": "tarde", "situacion_revista": "suplente"}).status_code == 201
     assert len(admin_client.get(DESIGNACIONES, {"situacion_revista": "suplente"}).data) == 1
+
+
+# --- Suplentes: a quién reemplazan ---------------------------------------------------------------
+
+def _asignar(cliente, designacion, e, materia="matematica", **extra):
+    return cliente.post(ASIGNACIONES, {"designacion": designacion.pk, "division": e["div"].pk,
+                                       "materia": e[materia].pk, **extra})
+
+
+def _persona(dni, apellido="Otro"):
+    return Personal.objects.create(apellido=apellido, nombre="Ana", dni=dni)
+
+
+def _suplente(dni):
+    return Designacion.objects.create(
+        personal=_persona(dni), categoria="profesor", turno="tarde", situacion_revista="suplente"
+    )
+
+
+@pytest.mark.parametrize("situacion", ["titular", "titular_interino", "provisional"])
+def test_suplente_indica_a_quien_reemplaza(admin_client, ana, estructura, situacion):
+    titular = Designacion.objects.create(personal=ana, categoria="profesor", turno="tarde", situacion_revista=situacion)
+    a_titular = _asignar(admin_client, titular, estructura).data
+    r = _asignar(admin_client, _suplente("40000001"), estructura, suplente_de=a_titular["id"])
+    assert r.status_code == 201 and r.data["suplente_de"] == a_titular["id"]
+    assert r.data["situacion_revista"] == "suplente" and "Matemática" in r.data["etiqueta"]
+
+
+def test_el_suplente_debe_indicar_a_quien_reemplaza(admin_client, estructura):
+    r = _asignar(admin_client, _suplente("40000001"), estructura)
+    assert r.status_code == 400 and "reemplaza" in str(r.data)
+
+
+def test_solo_un_suplente_puede_reemplazar(admin_client, ana, estructura):
+    a_titular = _asignar(admin_client, _designar(ana), estructura).data
+    otro = Designacion.objects.create(
+        personal=_persona("40000001"), categoria="profesor", turno="tarde", situacion_revista="titular"
+    )
+    assert _asignar(admin_client, otro, estructura, suplente_de=a_titular["id"]).status_code == 400
+
+
+def test_el_reemplazado_debe_ser_del_mismo_curso_y_materia(admin_client, ana, estructura):
+    a_mate = _asignar(admin_client, _designar(ana), estructura).data
+    r = _asignar(admin_client, _suplente("40000001"), estructura, materia="contabilidad", suplente_de=a_mate["id"])
+    assert r.status_code == 400 and "mismo curso y materia" in str(r.data)
+
+
+def test_no_se_reemplaza_a_otro_suplente_ni_a_uno_mismo(admin_client, ana, estructura):
+    a_titular = _asignar(admin_client, _designar(ana), estructura).data
+    a_sup1 = _asignar(admin_client, _suplente("40000001"), estructura, suplente_de=a_titular["id"]).data
+    assert _asignar(admin_client, _suplente("40000002"), estructura, suplente_de=a_sup1["id"]).status_code == 400
+    # una persona con dos designaciones (titular y suplente) no puede reemplazarse a sí misma
+    mismo = Designacion.objects.create(personal=ana, categoria="profesor", turno="tarde", situacion_revista="suplente")
+    assert _asignar(admin_client, mismo, estructura, suplente_de=a_titular["id"]).status_code == 400
+
+
+def test_no_se_borra_a_un_titular_que_tiene_suplentes(admin_client, ana, estructura):
+    a_titular = _asignar(admin_client, _designar(ana), estructura).data
+    _asignar(admin_client, _suplente("40000001"), estructura, suplente_de=a_titular["id"])
+    assert admin_client.delete(f"{ASIGNACIONES}{a_titular['id']}/").status_code == 409
+    assert admin_client.delete(f"{PERSONAL}{ana.pk}/").status_code == 409
+
+
+def test_cambios_de_situacion_que_dejarian_datos_incoherentes(admin_client, ana, estructura):
+    titular = _designar(ana)
+    a_titular = _asignar(admin_client, titular, estructura).data
+    sup = _suplente("40000001")
+    _asignar(admin_client, sup, estructura, suplente_de=a_titular["id"])
+    # el suplente no puede dejar de serlo mientras reemplaza a alguien
+    assert admin_client.patch(f"{DESIGNACIONES}{sup.pk}/", {"situacion_revista": "titular"}).status_code == 400
+    # el titular no puede pasar a suplente mientras tiene suplentes
+    assert admin_client.patch(f"{DESIGNACIONES}{titular.pk}/", {"situacion_revista": "suplente"}).status_code == 400
+    assert admin_client.patch(f"{DESIGNACIONES}{titular.pk}/", {"situacion_revista": "provisional"}).status_code == 200
+
+
+def test_listado_de_asignaciones_incluye_etiqueta_y_situacion(admin_client, ana, estructura):
+    _asignar(admin_client, _designar(ana), estructura)
+    fila = admin_client.get(ASIGNACIONES).data[0]
+    assert fila["situacion_revista"] == "titular" and fila["suplente_de"] is None
+    assert "Pérez, Ana" in fila["etiqueta"] and "4° 1ª" in fila["etiqueta"]

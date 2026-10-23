@@ -13,6 +13,9 @@ const props = withDefaults(defineProps<{
   barraFinal?: boolean
 }>(), { barraFinal: true }) // Vue pone en false las props Boolean ausentes: el default evita perder la barra
 
+/** Se emite cada vez que se carga la lista: permite a la pantalla refrescar opciones que dependen de ella. */
+const emit = defineEmits<{ cargado: [filas: Registro[]] }>()
+
 const api = crud(props.endpoint, props.barraFinal)
 const filas = ref<Registro[]>([])
 const error = ref('')
@@ -42,6 +45,7 @@ function texto(campo: Campo, fila: Registro): string {
 async function cargar() {
   try {
     filas.value = await api.listar()
+    emit('cargado', filas.value)
   } catch (e) {
     error.value = mensajeError(e)
   }

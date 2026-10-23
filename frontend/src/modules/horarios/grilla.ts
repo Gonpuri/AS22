@@ -1,6 +1,15 @@
-export interface Docente {
+export interface Reemplazado {
+  personal_id: number
   nombre: string
   situacion_revista: string
+}
+
+export interface Docente {
+  personal_id: number
+  nombre: string
+  situacion_revista: string
+  es_suplente: boolean
+  suplente_de: Reemplazado | null
 }
 
 export interface BloqueGrilla {
@@ -47,8 +56,28 @@ export function armarFilas(bloques: BloqueGrilla[]): Fila[] {
   return [...filas.values()].sort((a, b) => a.inicio.localeCompare(b.inicio) || a.fin.localeCompare(b.fin))
 }
 
-/** Líneas del cartel que aparece al pasar el puntero sobre una materia. */
-export function lineasDocentes(bloque: BloqueGrilla): string[] {
-  if (!bloque.docentes.length) return ['Sin docente asignado']
-  return bloque.docentes.map((d) => `${d.nombre} (${d.situacion_revista})`)
+/** Ruta de la ficha con los datos personales de un docente. */
+export const rutaFicha = (personalId: number) => `/rrhh/personal/${personalId}`
+
+export interface LineaDocente {
+  personalId: number
+  nombre: string
+  situacion: string
+  /** Solo para suplentes: a quién reemplazan (titular, titular interino o provisional). */
+  reemplaza: { personalId: number; nombre: string; situacion: string } | null
+  /** Suplente cargado sin indicar a quién reemplaza (datos anteriores a esa regla). */
+  sinTitular: boolean
+}
+
+/** Contenido del cartel que aparece al pasar el puntero sobre una materia. */
+export function lineasDocentes(bloque: BloqueGrilla): LineaDocente[] {
+  return bloque.docentes.map((d) => ({
+    personalId: d.personal_id,
+    nombre: d.nombre,
+    situacion: d.situacion_revista,
+    reemplaza: d.suplente_de
+      ? { personalId: d.suplente_de.personal_id, nombre: d.suplente_de.nombre, situacion: d.suplente_de.situacion_revista }
+      : null,
+    sinTitular: d.es_suplente && !d.suplente_de,
+  }))
 }

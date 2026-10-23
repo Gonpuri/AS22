@@ -15,9 +15,18 @@ class BloqueOut(BloqueIn):
     id: int
 
 
-class DocenteOut(BaseModel):
+class ReemplazoOut(BaseModel):
+    personal_id: int
     nombre: str
     situacion_revista: str
+
+
+class DocenteOut(BaseModel):
+    personal_id: int
+    nombre: str
+    situacion_revista: str
+    es_suplente: bool = False
+    suplente_de: ReemplazoOut | None = None
 
 
 class BloqueGrilla(BaseModel):

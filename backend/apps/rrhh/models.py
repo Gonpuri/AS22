@@ -74,6 +74,10 @@ class AsignacionDocente(models.Model):
     designacion = models.ForeignKey(Designacion, on_delete=models.CASCADE, related_name="asignaciones")
     division = models.ForeignKey(Division, on_delete=models.PROTECT, related_name="asignaciones_docentes")
     materia = models.ForeignKey(Materia, on_delete=models.PROTECT, related_name="asignaciones_docentes")
+    suplente_de = models.ForeignKey(
+        "self", null=True, blank=True, on_delete=models.PROTECT, related_name="suplentes",
+        help_text="Asignación del docente al que reemplaza (mismo curso y materia). Obligatoria para suplentes.",
+    )
 
     class Meta:
         ordering = ["designacion", "division", "materia"]
@@ -88,6 +92,21 @@ class AsignacionDocente(models.Model):
             raise ValidationError("Solo los profesores y EMATPs tienen cursos y materias asignados.")
         if not self.division.materias().filter(pk=self.materia_id).exists():
             raise ValidationError("La materia no corresponde al año/orientación de la división.")
+        suplente = Designacion.SituacionRevista.SUPLENTE
+        es_suplente = self.designacion.situacion_revista == suplente
+        if self.suplente_de_id is None:
+            if es_suplente:
+                raise ValidationError("Un suplente debe indicar a quién reemplaza (suplente de).")
+            return
+        if not es_suplente:
+            raise ValidationError("Solo un suplente puede indicar a quién reemplaza.")
+        reemplazado = self.suplente_de
+        if (reemplazado.division_id, reemplazado.materia_id) != (self.division_id, self.materia_id):
+            raise ValidationError("El docente reemplazado debe ser del mismo curso y materia.")
+        if reemplazado.designacion.situacion_revista == suplente:
+            raise ValidationError("Se reemplaza a un titular, titular interino o provisional, no a otro suplente.")
+        if reemplazado.designacion.personal_id == self.designacion.personal_id:
+            raise ValidationError("Una persona no puede ser suplente de sí misma.")
 
     def __str__(self):
         return f"{self.designacion} · {self.division} · {self.materia}"
