@@ -51,10 +51,14 @@ async function cargar() {
   }
 }
 
+const esTexto = (c: Campo) => !c.tipo || ['texto', 'email', 'password'].includes(c.tipo)
+
 function valorInicial(c: Campo, fila: Registro | null) {
   if (fila) return c.tipo === 'password' ? '' : fila[c.clave]
+  if (c.porDefecto !== undefined) return c.porDefecto
   if (c.tipo === 'checkbox') return true
-  return c.tipo === 'multiple' ? [] : null
+  if (c.tipo === 'multiple') return []
+  return esTexto(c) ? '' : null // el servidor rechaza null en los textos opcionales, pero acepta ''
 }
 
 function abrir(fila: Registro | null) {
@@ -139,9 +143,10 @@ defineExpose({ cargar })
               <v-text-field
                 v-else
                 v-model="formulario[c.clave]"
-                :label="c.etiqueta + (c.requerido ? ' *' : '')"
+                :label="c.etiqueta + (c.requerido && !(c.tipo === 'password' && editando) ? ' *' : '')"
                 :type="tipoInput(c.tipo)"
                 :placeholder="c.tipo === 'password' && editando ? 'Dejar vacío para no cambiarla' : undefined"
+                :autocomplete="c.tipo === 'password' ? 'new-password' : 'off'"
               />
             </template>
           </v-form>

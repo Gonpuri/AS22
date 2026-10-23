@@ -10,6 +10,8 @@ export interface Campo {
   requerido?: boolean
   /** Texto a mostrar en la tabla (por defecto el valor, o el título de la opción). */
   formato?: (valor: any, fila: Registro) => string
+  /** Valor inicial al crear (por defecto, los casilleros arrancan tildados). */
+  porDefecto?: boolean
   /** No se muestra en la tabla. */
   soloFormulario?: boolean
   /** Dato calculado por el servidor: se muestra en la tabla pero no está en el formulario. */

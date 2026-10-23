@@ -126,4 +126,44 @@ describe('CrudView', () => {
     expect(api.eliminar).toHaveBeenCalledWith(1)
     expect(w.text()).toContain('No se puede eliminar')
   })
+
+  it('al crear, los textos opcionales sin completar se envían vacíos (no null) y respeta porDefecto', async () => {
+    api.crear.mockResolvedValue({ id: 3 })
+    const vuetify = createVuetify({ components: componentes, directives: directivas })
+    const w = mount(CrudView, {
+      props: {
+        titulo: 'Usuarios',
+        endpoint: '/api/x',
+        campos: [
+          { clave: 'username', etiqueta: 'Usuario', requerido: true },
+          { clave: 'first_name', etiqueta: 'Nombre' },
+          { clave: 'email', etiqueta: 'Email', tipo: 'email' },
+          { clave: 'password', etiqueta: 'Contraseña', tipo: 'password', requerido: true },
+          { clave: 'is_staff', etiqueta: 'Administrador', tipo: 'checkbox', porDefecto: false },
+          { clave: 'is_active', etiqueta: 'Activo', tipo: 'checkbox' },
+        ],
+      },
+      global: { plugins: [vuetify] },
+      attachTo: document.body,
+    })
+    await flushPromises()
+    await w.find('[data-test="nuevo"]').trigger('click')
+    await flushPromises()
+    const escribir = async (etiqueta: string, valor: string) => {
+      const l = [...document.body.querySelectorAll('label')].find((x) => x.htmlFor && x.textContent?.includes(etiqueta))!
+      const input = document.getElementById(l.htmlFor) as HTMLInputElement
+      input.value = valor
+      input.dispatchEvent(new Event('input'))
+    }
+    await escribir('Usuario', 'maria')
+    await escribir('Contraseña', 'Clave-Segura-123')
+    await flushPromises()
+    ;(document.body.querySelector('#form-crud') as HTMLFormElement).dispatchEvent(new Event('submit', { cancelable: true }))
+    await flushPromises()
+    expect(api.crear).toHaveBeenCalledWith({
+      username: 'maria', first_name: '', email: '', password: 'Clave-Segura-123', is_staff: false, is_active: true,
+    })
+    const clave = [...document.body.querySelectorAll('input')].find((i) => i.type === 'password')!
+    expect(clave.getAttribute('autocomplete')).toBe('new-password') // evita que el navegador complete la clave guardada
+  })
 })

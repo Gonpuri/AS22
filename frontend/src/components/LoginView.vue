@@ -14,7 +14,7 @@ async function ingresar() {
   error.value = ''
   cargando.value = true
   try {
-    await auth.ingresar(username.value, password.value)
+    await auth.ingresar(username.value.trim(), password.value) // los teclados de celular suelen agregar un espacio al final
     router.push('/')
   } catch (e) {
     error.value = mensajeError(e)
@@ -29,8 +29,8 @@ async function ingresar() {
     <v-card width="360" class="pa-4">
       <v-card-title>Sistema Escolar</v-card-title>
       <v-form @submit.prevent="ingresar">
-        <v-text-field v-model="username" label="Usuario" autofocus />
-        <v-text-field v-model="password" label="Contraseña" type="password" />
+        <v-text-field v-model="username" label="Usuario" autocomplete="username" autocapitalize="none" autofocus />
+        <v-text-field v-model="password" label="Contraseña" type="password" autocomplete="current-password" />
         <v-alert v-if="error" type="error" class="mb-4" density="compact">{{ error }}</v-alert>
         <v-btn type="submit" color="primary" block :loading="cargando">Ingresar</v-btn>
       </v-form>

@@ -15,6 +15,11 @@ describe('mensajeError', () => {
   it('errores de validación de FastAPI (lista)', () => {
     expect(mensajeError(err({ detail: [{ msg: 'campo requerido' }] }))).toBe('campo requerido')
   })
+  it('errores generales (p. ej. credenciales incorrectas) sin nombre de campo', () => {
+    expect(mensajeError(err({ non_field_errors: ['No puede iniciar sesión con las credenciales proporcionadas.'] }))).toBe(
+      'No puede iniciar sesión con las credenciales proporcionadas.',
+    )
+  })
   it('errores por campo de DRF', () => {
     expect(mensajeError(err({ nombre: ['Ya existe.'], anio: ['Requerido.'] }))).toBe('nombre: Ya existe. · anio: Requerido.')
   })

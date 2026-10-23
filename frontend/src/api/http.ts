@@ -42,6 +42,9 @@ export function mensajeError(e: unknown): string {
   if (typeof d.detail === 'string') return d.detail
   if (Array.isArray(d.detail)) return d.detail.map((x) => (x as { msg?: string }).msg ?? String(x)).join(' ')
   return Object.entries(d)
-    .map(([campo, msg]) => `${campo}: ${Array.isArray(msg) ? msg.join(' ') : String(msg)}`)
+    .map(([campo, msg]) => {
+      const texto = Array.isArray(msg) ? msg.join(' ') : String(msg)
+      return campo === 'non_field_errors' ? texto : `${campo}: ${texto}`
+    })
     .join(' · ')
 }
