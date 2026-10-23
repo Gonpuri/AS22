@@ -4,6 +4,12 @@ import { modulos } from '@/modules'
 import AppLayout from '@/components/AppLayout.vue'
 import LoginView from '@/components/LoginView.vue'
 
+/** Primera pantalla a la que puede entrar el usuario (los módulos solo para administradores se saltean). */
+export function primeraRuta(): string {
+  const modulo = modulos.find((m) => !m.soloAdmin || auth.esAdmin.value) ?? modulos[0]
+  return `/${modulo.nombre}/${modulo.rutas[0].path}`
+}
+
 export const router = createRouter({
   history: createWebHistory(),
   routes: [
@@ -11,7 +17,7 @@ export const router = createRouter({
     {
       path: '/',
       component: AppLayout,
-      redirect: () => `/${modulos[0].nombre}/${modulos[0].rutas[0].path}`,
+      redirect: () => primeraRuta(),
       children: modulos.flatMap((m) =>
         m.rutas.map((r) => ({
           path: `${m.nombre}/${r.path}`,

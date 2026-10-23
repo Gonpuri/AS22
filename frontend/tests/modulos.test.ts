@@ -6,8 +6,8 @@ describe('registro de módulos', () => {
     expect(modulos.map((m) => m.nombre)).toEqual(['academico', 'horarios', 'consulta_docente', 'rrhh', 'administracion'])
   })
 
-  it('la administración es solo para administradores', () => {
-    expect(modulos.filter((m) => m.soloAdmin).map((m) => m.nombre)).toEqual(['administracion'])
+  it('la estructura académica y la administración son solo para administradores', () => {
+    expect(modulos.filter((m) => m.soloAdmin).map((m) => m.nombre)).toEqual(['academico', 'administracion'])
   })
 
   it('estructura académica expone orientaciones, años, divisiones y materias', () => {

@@ -1,7 +1,7 @@
 import { reactive, computed } from 'vue'
 import { http, guardarToken, tokenGuardado } from '@/api/http'
 
-interface Usuario { id: number; username: string; first_name: string; last_name: string; is_staff: boolean }
+interface Usuario { id: number; username: string; first_name: string; last_name: string; is_staff: boolean; is_superuser?: boolean }
 
 const estado = reactive<{ token: string | null; usuario: Usuario | null }>({
   token: tokenGuardado(),
@@ -11,7 +11,8 @@ const estado = reactive<{ token: string | null; usuario: Usuario | null }>({
 export const auth = {
   estado,
   autenticado: computed(() => !!estado.token),
-  esAdmin: computed(() => !!estado.usuario?.is_staff),
+  /** Administrador: staff o superusuario (igual que en el servidor). */
+  esAdmin: computed(() => !!(estado.usuario?.is_staff || estado.usuario?.is_superuser)),
 
   async ingresar(username: string, password: string) {
     const { data } = await http.post<{ token: string }>('/api/auth/login/', { username, password })

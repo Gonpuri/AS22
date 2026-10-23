@@ -10,7 +10,8 @@ class UsuarioSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ["id", "username", "password", "first_name", "last_name", "email", "is_staff", "is_active"]
+        fields = ["id", "username", "password", "first_name", "last_name", "email", "is_staff", "is_superuser", "is_active"]
+        read_only_fields = ["is_superuser"]  # se asigna desde el panel de Django o con createsuperuser
 
     def validate(self, attrs):
         if self.instance is None and not attrs.get("password"):

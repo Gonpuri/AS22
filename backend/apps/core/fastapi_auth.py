@@ -2,6 +2,8 @@
 from fastapi import Depends, Header, HTTPException, status
 from rest_framework.authtoken.models import Token
 
+from .permissions import es_administrador
+
 
 def usuario_actual(authorization: str | None = Header(default=None)):
     if authorization:
@@ -14,6 +16,6 @@ def usuario_actual(authorization: str | None = Header(default=None)):
 
 
 def administrador(user=Depends(usuario_actual)):
-    if not user.is_staff:
+    if not es_administrador(user):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Solo los administradores pueden modificar.")
     return user

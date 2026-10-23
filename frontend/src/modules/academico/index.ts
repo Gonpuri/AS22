@@ -4,6 +4,7 @@ const modulo: ModuloFrontend = {
   nombre: 'academico',
   etiqueta: 'Estructura académica',
   icono: 'mdi-school',
+  soloAdmin: true,
   orden: 10,
   rutas: [
     { path: 'orientaciones', etiqueta: 'Orientaciones', component: () => import('./views/Orientaciones.vue') },
