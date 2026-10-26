@@ -3,7 +3,7 @@ import { computed, ref, watch } from 'vue'
 import { http, mensajeError } from '@/api/http'
 import { useOpciones } from '@/api/opciones'
 import {
-  armarFilas, DIAS, lineasDocentes, lineasPersonal, nombresEncabezado, type BloqueGrilla, type Docente,
+  armarFilas, DIAS, lineasDocentes, lineasMayorPad, lineasPersonal, nombresEncabezado, type BloqueGrilla, type Docente,
 } from '../grilla'
 import CartelPersonal from './CartelPersonal.vue'
 
@@ -83,7 +83,12 @@ watch(divisionId, async (id) => {
                 <template #activator="{ props }">
                   <span v-bind="props" class="materia-nombre" data-test="materia">{{ f.celdas[d.numero]!.materia }}</span>
                 </template>
-                <CartelPersonal :lineas="lineasDocentes(f.celdas[d.numero]!)" vacio="Sin docente asignado" data-test="docentes" />
+                <CartelPersonal
+                  :lineas="lineasDocentes(f.celdas[d.numero]!)"
+                  :mayor-pad="lineasMayorPad(f.celdas[d.numero]!)"
+                  vacio="Sin docente asignado"
+                  data-test="docentes"
+                />
               </v-menu>
             </td>
           </tr>

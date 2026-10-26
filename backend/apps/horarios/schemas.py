@@ -1,4 +1,5 @@
 from datetime import time
+from decimal import Decimal
 
 from pydantic import BaseModel, Field
 
@@ -29,6 +30,12 @@ class DocenteOut(BaseModel):
     suplente_de: ReemplazoOut | None = None
 
 
+class ResponsableOut(BaseModel):
+    personal_id: int
+    nombre: str
+    pad: Decimal
+
+
 class BloqueGrilla(BaseModel):
     id: int
     dia: int
@@ -36,6 +43,7 @@ class BloqueGrilla(BaseModel):
     hora_fin: time
     materia: str
     docentes: list[DocenteOut]
+    mayor_pad: list[ResponsableOut] = []  # los 3 con mayor PAD dando clase en ese día y horario
 
 
 class DivisionOut(BaseModel):

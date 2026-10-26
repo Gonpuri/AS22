@@ -6,8 +6,8 @@ from apps.core.fastapi_auth import administrador, usuario_actual
 from apps.rrhh.models import AsignacionDocente, AsignacionPreceptor, Designacion
 
 from .models import BloqueHorario
-from .schemas import BloqueGrilla, BloqueIn, BloqueOut, DivisionOut, DocenteOut, GrillaOut, ReemplazoOut
-from .services import ErrorHorario, validar_bloque
+from .schemas import BloqueGrilla, BloqueIn, BloqueOut, DivisionOut, DocenteOut, GrillaOut, ReemplazoOut, ResponsableOut
+from .services import ErrorHorario, mayor_pad_por_bloque, validar_bloque
 
 router = APIRouter(tags=["horarios"])
 
@@ -94,7 +94,8 @@ def grilla(division: int, _=Depends(usuario_actual)):
         )
     ]
     _ordenar(preceptores)
-    bloques = BloqueHorario.objects.filter(division=div).select_related("materia")
+    bloques = list(BloqueHorario.objects.filter(division=div).select_related("materia"))
+    mayor_pad = mayor_pad_por_bloque(bloques)
     return GrillaOut(
         preceptores=preceptores,
         division=DivisionOut(
@@ -105,6 +106,7 @@ def grilla(division: int, _=Depends(usuario_actual)):
             BloqueGrilla(
                 id=b.id, dia=b.dia, hora_inicio=b.hora_inicio, hora_fin=b.hora_fin,
                 materia=b.materia.nombre, docentes=docentes.get(b.materia_id, []),
+                mayor_pad=[ResponsableOut(personal_id=p.id, nombre=str(p), pad=p.pad) for p in mayor_pad[b.id]],
             )
             for b in bloques
         ],

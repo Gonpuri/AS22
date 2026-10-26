@@ -1,3 +1,5 @@
+import { formatoPad } from '../rrhh/ficha'
+
 export interface Reemplazado {
   personal_id: number
   nombre: string
@@ -12,6 +14,12 @@ export interface Docente {
   suplente_de: Reemplazado | null
 }
 
+export interface ResponsablePad {
+  personal_id: number
+  nombre: string
+  pad: string
+}
+
 export interface BloqueGrilla {
   id: number
   dia: number
@@ -19,6 +27,8 @@ export interface BloqueGrilla {
   hora_fin: string
   materia: string
   docentes: Docente[]
+  /** Los 3 con mayor PAD entre quienes dan clase en ese día y horario (ausente en APIs anteriores). */
+  mayor_pad?: ResponsablePad[]
 }
 
 export interface Fila {
@@ -81,6 +91,17 @@ export function lineasPersonal(personas: Docente[]): LineaDocente[] {
     sinTitular: d.es_suplente && !d.suplente_de,
   }))
 }
+
+export interface LineaPad {
+  puesto: number
+  personalId: number
+  nombre: string
+  pad: string
+}
+
+/** Quienes asumirían la responsabilidad ante la falta de autoridades en ese horario, de mayor a menor PAD. */
+export const lineasMayorPad = (bloque: BloqueGrilla): LineaPad[] =>
+  (bloque.mayor_pad ?? []).map((m, i) => ({ puesto: i + 1, personalId: m.personal_id, nombre: m.nombre, pad: formatoPad(m.pad) }))
 
 export const lineasDocentes = (bloque: BloqueGrilla): LineaDocente[] => lineasPersonal(bloque.docentes)
 
