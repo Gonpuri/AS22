@@ -1,0 +1,82 @@
+/* Estética moderna: tipografía limpia, bordes sutiles, esquinas redondeadas y transiciones suaves. */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  --radio: 14px;
+}
+
+.v-application {
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif !important;
+  letter-spacing: -0.005em;
+}
+
+/* Barra superior translúcida */
+.v-app-bar.v-toolbar {
+  background: rgba(var(--v-theme-surface), 0.82) !important;
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(var(--v-theme-on-surface), 0.08) !important;
+}
+.v-app-bar-title {
+  font-weight: 700;
+  background: linear-gradient(90deg, rgb(var(--v-theme-primary)), rgb(var(--v-theme-secondary)));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Menú lateral */
+.v-navigation-drawer {
+  border-right: 1px solid rgba(var(--v-theme-on-surface), 0.08) !important;
+  background: rgb(var(--v-theme-surface)) !important;
+}
+.v-navigation-drawer .v-list-subheader {
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+}
+.v-navigation-drawer .v-list-item {
+  border-radius: 10px;
+  margin-bottom: 2px;
+  transition: background-color 0.15s ease;
+}
+.v-navigation-drawer .v-list-item--active {
+  background: rgba(var(--v-theme-primary), 0.12);
+  color: rgb(var(--v-theme-primary));
+  font-weight: 600;
+}
+
+/* Tarjetas y tablas */
+.v-card {
+  border-color: rgba(var(--v-theme-on-surface), 0.08) !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 24px rgba(15, 23, 42, 0.04) !important;
+}
+.v-table, .v-data-table {
+  border-radius: var(--radio);
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.08);
+  overflow: hidden;
+}
+.v-data-table th {
+  font-weight: 600 !important;
+  text-transform: uppercase;
+  font-size: 0.72rem !important;
+  letter-spacing: 0.04em;
+  background: rgb(var(--v-theme-surface-variant)) !important;
+}
+
+/* Botón principal con degradado frío */
+.v-btn.bg-primary, .v-btn--variant-flat.text-primary {
+  transition: transform 0.12s ease, filter 0.12s ease;
+}
+.v-btn.bg-primary:hover {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+}
+
+/* Pantalla de ingreso */
+.pantalla-login {
+  background:
+    radial-gradient(900px 500px at 10% -10%, rgba(var(--v-theme-primary), 0.22), transparent 60%),
+    radial-gradient(800px 500px at 100% 110%, rgba(var(--v-theme-secondary), 0.22), transparent 60%),
+    rgb(var(--v-theme-background));
+}

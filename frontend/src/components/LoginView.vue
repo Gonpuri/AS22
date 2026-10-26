@@ -25,9 +25,9 @@ async function ingresar() {
 </script>
 
 <template>
-  <v-main class="d-flex align-center justify-center">
-    <v-card width="360" class="pa-4">
-      <v-card-title>Sistema Escolar</v-card-title>
+  <v-main class="d-flex align-center justify-center pantalla-login">
+    <v-card width="380" class="pa-6">
+      <v-card-title class="text-h5 font-weight-bold px-0 mb-2">Sistema Escolar</v-card-title>
       <v-form @submit.prevent="ingresar">
         <v-text-field v-model="username" label="Usuario" autocomplete="username" autocapitalize="none" autofocus />
         <v-text-field v-model="password" label="Contraseña" type="password" autocomplete="current-password" />

@@ -102,9 +102,12 @@ watch(divisionId, async (id) => {
 .horario { max-width: 860px; }
 .encabezado { display: flex; gap: 32px; flex-wrap: wrap; margin-bottom: 8px; }
 .titulo { text-align: center; font-size: 1.4rem; letter-spacing: 1px; margin: 8px 0; }
-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-th, td { border: 1px solid rgba(var(--v-theme-on-surface), 0.7); padding: 6px 8px; text-align: center; }
-th { font-weight: 600; background: rgba(var(--v-theme-on-surface), 0.08); }
+table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.85rem; border: 1px solid rgba(var(--v-theme-on-surface), 0.14); border-radius: 14px; overflow: hidden; background: rgb(var(--v-theme-surface)); }
+th, td { border-right: 1px solid rgba(var(--v-theme-on-surface), 0.1); border-bottom: 1px solid rgba(var(--v-theme-on-surface), 0.1); padding: 8px 10px; text-align: center; }
+tr > :last-child { border-right: 0; }
+tbody tr:last-child > * { border-bottom: 0; }
+th { font-weight: 600; background: rgba(var(--v-theme-primary), 0.1); color: rgb(var(--v-theme-primary)); }
+td.materia:not(:empty):hover { background: rgba(var(--v-theme-primary), 0.06); }
 td.hora { white-space: nowrap; width: 110px; }
 td.materia { height: 44px; }
 .materia-nombre { cursor: help; display: inline-block; width: 100%; }
