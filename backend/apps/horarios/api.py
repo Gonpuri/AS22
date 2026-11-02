@@ -1,17 +1,22 @@
 """API de horarios (FastAPI). Se publica en /api/horarios/."""
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile, status
 
 from apps.academico.models import Division, Materia
 from apps.core.fastapi_auth import administrador, usuario_actual
 from apps.rrhh.models import AsignacionDocente, AsignacionPreceptor, Designacion
 
+from .importar_pdf import ErrorPdf, proponer_bloques
 from .models import BloqueHorario
-from .schemas import BloqueGrilla, BloqueIn, BloqueOut, DivisionOut, DocenteOut, GrillaOut, ReemplazoOut, ResponsableOut
-from .services import ErrorHorario, mayor_pad_por_bloque, validar_bloque
+from .schemas import (
+    BloqueGrilla, BloqueIn, BloqueOut, DivisionOut, DocenteOut, GrillaOut, ImportacionIn, ImportacionOut,
+    PropuestaOut, ReemplazoOut, ResponsableOut,
+)
+from .services import ErrorHorario, importar_bloques, mayor_pad_por_bloque, validar_bloque
 
 router = APIRouter(tags=["horarios"])
 
 SIN_PROCESAR = 422
+MAX_PDF_BYTES = 10 * 1024 * 1024
 
 
 def _salida(bloque: BloqueHorario) -> BloqueOut:
@@ -149,3 +154,31 @@ def actualizar(pk: int, datos: BloqueIn, _=Depends(administrador)):
 def eliminar(pk: int, _=Depends(administrador)):
     _bloque_o_404(pk).delete()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post("/importar/previsualizar", response_model=PropuestaOut)
+def previsualizar_pdf(division: int = Form(...), archivo: UploadFile = File(...), _=Depends(administrador)):
+    """Lee el horario de un PDF y devuelve la propuesta de bloques para revisar. No guarda nada."""
+    div = _obtener(Division, division, "División")
+    contenido = archivo.file.read(MAX_PDF_BYTES + 1)
+    if len(contenido) > MAX_PDF_BYTES:
+        raise HTTPException(status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, "El PDF supera los 10 MB.")
+    try:
+        bloques = proponer_bloques(contenido, div.materias())
+    except ErrorPdf as e:
+        raise HTTPException(SIN_PROCESAR, str(e))
+    return PropuestaOut(division=div.id, bloques=bloques)
+
+
+@router.post("/importar", response_model=ImportacionOut, status_code=status.HTTP_201_CREATED)
+def importar(datos: ImportacionIn, _=Depends(administrador)):
+    """Guarda el horario completo ya revisado de una división (todo o nada)."""
+    div = _obtener(Division, datos.division, "División")
+    materias = {m.id: m for m in Materia.objects.filter(pk__in={b.materia for b in datos.bloques})}
+    if len(materias) != len({b.materia for b in datos.bloques}):
+        raise HTTPException(SIN_PROCESAR, "Materia inexistente.")
+    bloques = [{**b.model_dump(), "materia": materias[b.materia]} for b in datos.bloques]
+    try:
+        return ImportacionOut(**importar_bloques(div, bloques, datos.reemplazar))
+    except ErrorHorario as e:
+        raise HTTPException(SIN_PROCESAR, str(e))

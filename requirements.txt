@@ -9,3 +9,6 @@ whitenoise>=6.9
 pytest>=8.3
 pytest-django>=4.11
 httpx>=0.28
+pdfplumber>=0.11
+python-multipart>=0.0.20
+reportlab>=4.2

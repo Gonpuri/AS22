@@ -58,3 +58,35 @@ class GrillaOut(BaseModel):
     preceptores: list[DocenteOut] = []
     division: DivisionOut
     bloques: list[BloqueGrilla]
+
+
+class BloquePropuesto(BaseModel):
+    dia: int
+    hora_inicio: time
+    hora_fin: time
+    materia: int | None  # None: no se reconoció el texto del PDF
+    texto: str  # lo que decía la celda del PDF
+
+
+class PropuestaOut(BaseModel):
+    division: int
+    bloques: list[BloquePropuesto]
+
+
+class BloqueRevisado(BaseModel):
+    dia: int = Field(ge=1, le=5)
+    hora_inicio: time
+    hora_fin: time
+    materia: int
+
+
+class ImportacionIn(BaseModel):
+    division: int
+    bloques: list[BloqueRevisado]
+    reemplazar: bool = False  # borra antes los bloques actuales de la división
+
+
+class ImportacionOut(BaseModel):
+    creados: int
+    existentes: int
+    eliminados: int

@@ -1,7 +1,6 @@
 import json
 import os
 import re
-import unicodedata
 from datetime import time
 from pathlib import Path
 
@@ -10,15 +9,12 @@ from django.db import transaction
 
 from apps.academico.models import Anio, Division, Materia
 from apps.horarios.models import BloqueHorario
-from apps.horarios.services import ErrorHorario, validar_bloque
+from apps.horarios.services import ErrorHorario, clave_texto, validar_bloque
 
 ARCHIVO = Path(__file__).resolve().parents[2] / "datos" / "horarios_1er_anio_2026.json"
 
 
-def _clave(texto: str) -> str:
-    """Nombre comparable: sin tildes, en minúsculas y sin signos ("Cs. Naturales" == "cs naturales")."""
-    base = unicodedata.normalize("NFKD", texto).encode("ascii", "ignore").decode()
-    return re.sub(r"[^a-z0-9]+", " ", base.lower()).strip()
+_clave = clave_texto
 
 
 def _clave_division(nombre: str) -> str:

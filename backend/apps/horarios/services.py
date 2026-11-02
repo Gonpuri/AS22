@@ -1,4 +1,18 @@
+import re
+import unicodedata
+
+from django.db import transaction
+
 from .models import BloqueHorario
+
+
+def clave_texto(texto: str) -> str:
+    """Nombre comparable: sin tildes, en minúsculas y sin signos ("Cs. Naturales" == "cs naturales")."""
+    base = unicodedata.normalize("NFKD", texto).encode("ascii", "ignore").decode()
+    return re.sub(r"[^a-z0-9]+", " ", base.lower()).strip()
+
+
+DIAS = {1: "Lunes", 2: "Martes", 3: "Miércoles", 4: "Jueves", 5: "Viernes"}
 
 
 class ErrorHorario(ValueError):
@@ -19,6 +33,35 @@ def validar_bloque(*, division, materia, dia, hora_inicio, hora_fin, excluir_id=
         superpuestos = superpuestos.exclude(pk=excluir_id)
     if superpuestos.exists():
         raise ErrorHorario("El bloque se superpone con otro de la misma división.")
+
+
+def importar_bloques(division, bloques, reemplazar=False):
+    """Guarda el horario completo de una división (bloques con `materia` ya resuelta) en una sola
+    transacción: si algún bloque no es válido no se guarda nada. Con `reemplazar` se borran antes los
+    bloques actuales; sin eso, los que ya existen idénticos se cuentan y no se duplican.
+    Devuelve {"creados", "existentes", "eliminados"}."""
+    resumen = {"creados": 0, "existentes": 0, "eliminados": 0}
+    errores = []
+    with transaction.atomic():
+        if reemplazar:
+            resumen["eliminados"] = BloqueHorario.objects.filter(division=division).delete()[0]
+        for b in bloques:
+            campos = dict(division=division, materia=b["materia"], dia=b["dia"],
+                          hora_inicio=b["hora_inicio"], hora_fin=b["hora_fin"])
+            if BloqueHorario.objects.filter(**campos).exists():
+                resumen["existentes"] += 1
+                continue
+            try:
+                validar_bloque(**campos)
+            except ErrorHorario as error:
+                errores.append(f"{DIAS[b['dia']]} {b['hora_inicio']:%H:%M}-{b['hora_fin']:%H:%M} {b['materia']}: {error}")
+                continue
+            BloqueHorario.objects.create(**campos)
+            resumen["creados"] += 1
+        if errores:
+            transaction.set_rollback(True)
+            raise ErrorHorario("No se guardó nada. " + " · ".join(errores))
+    return resumen
 
 
 LIMITE_MAYOR_PAD = 3
