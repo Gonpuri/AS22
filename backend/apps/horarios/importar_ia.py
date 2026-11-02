@@ -110,6 +110,8 @@ def _pagina_como_pdf(contenido: bytes, numero: int) -> bytes:
 
 
 def _consultar(pagina_pdf: bytes) -> dict:
+    if not os.environ.get("ANTHROPIC_API_KEY"):
+        raise ErrorIa("Falta configurar ANTHROPIC_API_KEY en el servidor (variable de entorno en Render).")
     try:
         cliente = anthropic.Anthropic()
         respuesta = cliente.messages.create(
@@ -126,7 +128,7 @@ def _consultar(pagina_pdf: bytes) -> dict:
         )
     except anthropic.AuthenticationError as error:
         raise ErrorIa("La clave de la API de Anthropic (ANTHROPIC_API_KEY) falta o no es válida.") from error
-    except anthropic.APIError as error:
+    except (anthropic.APIError, TypeError) as error:
         raise ErrorIa(f"No se pudo consultar a la IA: {error}") from error
     if respuesta.stop_reason in ("refusal", "max_tokens"):
         raise ErrorIa("La IA no pudo leer esta página.")

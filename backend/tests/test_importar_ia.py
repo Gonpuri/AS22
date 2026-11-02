@@ -142,3 +142,9 @@ def test_todo_o_nada_entre_cursos(api_admin):
     r = api_admin.post(CURSOS, json={"cursos": [_curso(), malo]})
     assert r.status_code == 422 and "No se guardó nada" in r.json()["detail"] and "superpone" in r.json()["detail"]
     assert (Division.objects.count(), Materia.objects.count(), BloqueHorario.objects.count(), Orientacion.objects.count()) == (0, 0, 0, 0)
+
+
+def test_sin_clave_de_anthropic_responde_un_error_claro(api_admin, monkeypatch):
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    r = _leer(api_admin)
+    assert r.status_code == 502 and "ANTHROPIC_API_KEY" in r.json()["detail"]
