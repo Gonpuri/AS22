@@ -130,7 +130,7 @@ async function guardar() {
 
 <template>
   <div>
-    <h2 class="text-h5 mb-2">Cargar horarios desde PDF escaneado</h2>
+    <h2 class="text-h5 mb-2">Carga IA: horarios desde PDF escaneado</h2>
     <v-alert v-if="!auth.esAdmin.value" type="info" data-test="solo-admin">
       Solo los administradores pueden cargar horarios.
     </v-alert>
