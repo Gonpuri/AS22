@@ -8,10 +8,10 @@ import { temaGuardado } from '@/stores/tema'
 const claro = {
   dark: false,
   colors: {
-    background: '#F4F7FB',
+    background: '#E8EEF7',
     surface: '#FFFFFF',
-    'surface-variant': '#E6ECF5',
-    'on-surface-variant': '#475569',
+    'surface-variant': '#D5DFEF',
+    'on-surface-variant': '#334155',
     primary: '#3B63E0',
     secondary: '#0E9AA7',
     info: '#0EA5E9',
