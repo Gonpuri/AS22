@@ -15,6 +15,12 @@ def clave_texto(texto: str) -> str:
 DIAS = {1: "Lunes", 2: "Martes", 3: "Miércoles", 4: "Jueves", 5: "Viernes"}
 
 
+def clave_division(nombre: str) -> str:
+    """"2ª", "2°" y "2" son la misma división."""
+    numeros = re.findall(r"\d+", nombre)
+    return "".join(numeros) if numeros else clave_texto(nombre)
+
+
 class ErrorHorario(ValueError):
     pass
 
@@ -35,6 +41,25 @@ def validar_bloque(*, division, materia, dia, hora_inicio, hora_fin, excluir_id=
         raise ErrorHorario("El bloque se superpone con otro de la misma división.")
 
 
+def _guardar_bloques(division, bloques, resumen, errores):
+    """Crea los bloques de una división que no existan ya; los inválidos se acumulan en `errores`."""
+    for b in bloques:
+        campos = dict(division=division, materia=b["materia"], dia=b["dia"],
+                      hora_inicio=b["hora_inicio"], hora_fin=b["hora_fin"])
+        if BloqueHorario.objects.filter(**campos).exists():
+            resumen["existentes"] += 1
+            continue
+        try:
+            validar_bloque(**campos)
+        except ErrorHorario as error:
+            errores.append(
+                f"{division} {DIAS[b['dia']]} {b['hora_inicio']:%H:%M}-{b['hora_fin']:%H:%M} {b['materia']}: {error}"
+            )
+            continue
+        BloqueHorario.objects.create(**campos)
+        resumen["creados"] += 1
+
+
 def importar_bloques(division, bloques, reemplazar=False):
     """Guarda el horario completo de una división (bloques con `materia` ya resuelta) en una sola
     transacción: si algún bloque no es válido no se guarda nada. Con `reemplazar` se borran antes los
@@ -45,22 +70,81 @@ def importar_bloques(division, bloques, reemplazar=False):
     with transaction.atomic():
         if reemplazar:
             resumen["eliminados"] = BloqueHorario.objects.filter(division=division).delete()[0]
-        for b in bloques:
-            campos = dict(division=division, materia=b["materia"], dia=b["dia"],
-                          hora_inicio=b["hora_inicio"], hora_fin=b["hora_fin"])
-            if BloqueHorario.objects.filter(**campos).exists():
-                resumen["existentes"] += 1
-                continue
-            try:
-                validar_bloque(**campos)
-            except ErrorHorario as error:
-                errores.append(f"{DIAS[b['dia']]} {b['hora_inicio']:%H:%M}-{b['hora_fin']:%H:%M} {b['materia']}: {error}")
-                continue
-            BloqueHorario.objects.create(**campos)
-            resumen["creados"] += 1
+        _guardar_bloques(division, bloques, resumen, errores)
         if errores:
             transaction.set_rollback(True)
             raise ErrorHorario("No se guardó nada. " + " · ".join(errores))
+    return resumen
+
+
+def vincular_materia(materia, division):
+    """Deja la materia habilitada para la división (año y, si hace falta, orientación). Se usa al cargar
+    un horario desde un PDF, que es la prueba de que esa materia se dicta ahí. Las materias sin
+    orientaciones sirven a todas las del año; si tienen, se les suma la de la división."""
+    materia.anios.add(division.anio)
+    if materia.orientaciones.exists():
+        if division.orientacion_id is None:
+            raise ErrorHorario(f"«{materia}» es de una orientación y la división {division} no tiene ninguna.")
+        materia.orientaciones.add(division.orientacion)
+
+
+def importar_cursos(cursos):
+    """Carga el horario de varios cursos leídos de un PDF, todo en una transacción. Crea lo que falte
+    (año, orientación, división y materias) y vincula cada materia con su división.
+    Cada curso: {anio, nombre, turno, orientacion, reemplazar, bloques: [{dia, hora_inicio, hora_fin,
+    materia (Materia o None), materia_nombre}]}. Devuelve los totales."""
+    from apps.academico.models import Anio, Division, Materia, Orientacion
+
+    resumen = {"creados": 0, "existentes": 0, "eliminados": 0, "divisiones_creadas": 0, "materias_creadas": 0}
+    errores = []
+    with transaction.atomic():
+        materias = {clave_texto(m.nombre): m for m in Materia.objects.all()}
+        orientaciones = {clave_texto(o.nombre): o for o in Orientacion.objects.all()}
+        for curso in cursos:
+            anio, _ = Anio.objects.get_or_create(numero=curso["anio"])
+            orientacion = None
+            if curso["orientacion"]:
+                clave = clave_texto(curso["orientacion"])
+                if clave not in orientaciones:
+                    orientaciones[clave] = Orientacion.objects.create(nombre=curso["orientacion"].strip())
+                orientacion = orientaciones[clave]
+            clave = clave_division(curso["nombre"])
+            division = next((d for d in Division.objects.filter(anio=anio) if clave_division(d.nombre) == clave), None)
+            if division is None:
+                division = Division.objects.create(
+                    anio=anio, nombre=curso["nombre"], turno=curso["turno"], orientacion=orientacion
+                )
+                resumen["divisiones_creadas"] += 1
+            else:
+                cambios = []
+                if not division.turno:
+                    division.turno = curso["turno"]
+                    cambios.append("turno")
+                if division.orientacion_id is None and orientacion:
+                    division.orientacion = orientacion
+                    cambios.append("orientacion")
+                if cambios:
+                    division.save(update_fields=cambios)
+            if curso["reemplazar"]:
+                resumen["eliminados"] += BloqueHorario.objects.filter(division=division).delete()[0]
+            resueltos = []
+            for b in curso["bloques"]:
+                materia = b["materia"] or materias.get(clave_texto(b["materia_nombre"]))
+                if materia is None:
+                    materia = materias[clave_texto(b["materia_nombre"])] = Materia.objects.create(
+                        nombre=b["materia_nombre"].strip()
+                    )
+                    resumen["materias_creadas"] += 1
+                try:
+                    vincular_materia(materia, division)
+                except ErrorHorario as error:
+                    errores.append(str(error))
+                    continue
+                resueltos.append({**b, "materia": materia})
+            _guardar_bloques(division, resueltos, resumen, errores)
+        if errores:
+            transaction.set_rollback(True)
+            raise ErrorHorario("No se guardó nada. " + " · ".join(dict.fromkeys(errores)))
     return resumen
 
 

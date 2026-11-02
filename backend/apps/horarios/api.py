@@ -5,18 +5,22 @@ from apps.academico.models import Division, Materia
 from apps.core.fastapi_auth import administrador, usuario_actual
 from apps.rrhh.models import AsignacionDocente, AsignacionPreceptor, Designacion
 
+from . import importar_ia
 from .importar_pdf import ErrorPdf, proponer_bloques
 from .models import BloqueHorario
 from .schemas import (
-    BloqueGrilla, BloqueIn, BloqueOut, DivisionOut, DocenteOut, GrillaOut, ImportacionIn, ImportacionOut,
-    PropuestaOut, ReemplazoOut, ResponsableOut,
+    BloqueGrilla, BloqueIn, BloqueOut, CursoLeido, DivisionOut, DocenteOut, GrillaOut, ImportacionCursosIn,
+    ImportacionCursosOut, ImportacionIn, ImportacionOut, LecturaOut, PropuestaOut, ReemplazoOut, ResponsableOut,
 )
-from .services import ErrorHorario, importar_bloques, mayor_pad_por_bloque, validar_bloque
+from .services import (
+    ErrorHorario, clave_division, importar_bloques, importar_cursos, mayor_pad_por_bloque, validar_bloque,
+)
 
 router = APIRouter(tags=["horarios"])
 
 SIN_PROCESAR = 422
 MAX_PDF_BYTES = 10 * 1024 * 1024
+MAX_PDF_ESCANEADO_BYTES = 50 * 1024 * 1024  # fotos de varios cursos
 
 
 def _salida(bloque: BloqueHorario) -> BloqueOut:
@@ -180,5 +184,48 @@ def importar(datos: ImportacionIn, _=Depends(administrador)):
     bloques = [{**b.model_dump(), "materia": materias[b.materia]} for b in datos.bloques]
     try:
         return ImportacionOut(**importar_bloques(div, bloques, datos.reemplazar))
+    except ErrorHorario as e:
+        raise HTTPException(SIN_PROCESAR, str(e))
+
+
+@router.post("/importar/pdf/leer", response_model=LecturaOut)
+def leer_pdf_escaneado(pagina: int = Form(1), archivo: UploadFile = File(...), _=Depends(administrador)):
+    """Lee con IA una página (un curso) de un PDF escaneado y devuelve la propuesta. No guarda nada.
+    La pantalla pide las páginas de a una; `paginas` es el total del PDF."""
+    contenido = archivo.file.read(MAX_PDF_ESCANEADO_BYTES + 1)
+    if len(contenido) > MAX_PDF_ESCANEADO_BYTES:
+        raise HTTPException(status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, "El PDF supera los 50 MB.")
+    try:
+        paginas = importar_ia.cantidad_paginas(contenido)
+        encabezado, propuesta = importar_ia.leer_pagina(contenido, pagina, Materia.objects.all())
+    except ErrorPdf as e:
+        raise HTTPException(SIN_PROCESAR, str(e))
+    except importar_ia.ErrorIa as e:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, str(e))
+    clave = clave_division(encabezado["division"])
+    existente = next(
+        (d for d in Division.objects.filter(anio__numero=encabezado["anio"]) if clave_division(d.nombre) == clave), None
+    )
+    return LecturaOut(paginas=paginas, pagina=pagina, curso=CursoLeido(
+        **encabezado, division_id=existente.id if existente else None, **propuesta,
+    ))
+
+
+@router.post("/importar/cursos", response_model=ImportacionCursosOut, status_code=status.HTTP_201_CREATED)
+def importar_varios_cursos(datos: ImportacionCursosIn, _=Depends(administrador)):
+    """Guarda los horarios revisados de varios cursos (todo o nada). Crea las divisiones, orientaciones y
+    materias que falten y habilita cada materia en su división."""
+    ids = {b.materia for c in datos.cursos for b in c.bloques if b.materia is not None}
+    materias = {m.id: m for m in Materia.objects.filter(pk__in=ids)}
+    if len(materias) != len(ids):
+        raise HTTPException(SIN_PROCESAR, "Materia inexistente.")
+    cursos = [{
+        "anio": c.anio, "nombre": c.division.strip(), "turno": c.turno, "orientacion": c.modalidad.strip(),
+        "reemplazar": c.reemplazar,
+        "bloques": [{"dia": b.dia, "hora_inicio": b.hora_inicio, "hora_fin": b.hora_fin,
+                     "materia": materias.get(b.materia), "materia_nombre": b.materia_nombre} for b in c.bloques],
+    } for c in datos.cursos]
+    try:
+        return ImportacionCursosOut(**importar_cursos(cursos))
     except ErrorHorario as e:
         raise HTTPException(SIN_PROCESAR, str(e))

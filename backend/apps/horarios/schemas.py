@@ -90,3 +90,46 @@ class ImportacionOut(BaseModel):
     creados: int
     existentes: int
     eliminados: int
+
+
+class BloqueLeido(BaseModel):
+    dia: int
+    hora_inicio: time
+    hora_fin: time
+    materia: int | None  # id si ya existe en el sistema
+    materia_nombre: str  # nombre leído (se crea la materia si no existe)
+
+
+class CursoLeido(BaseModel):
+    anio: int
+    division: str
+    turno: str
+    modalidad: str
+    preceptor: str
+    division_id: int | None  # None: la división todavía no existe y se creará
+    bloques: list[BloqueLeido]
+    advertencias: list[str] = []
+
+
+class LecturaOut(BaseModel):
+    paginas: int
+    pagina: int
+    curso: CursoLeido
+
+
+class CursoImportIn(BaseModel):
+    anio: int = Field(ge=1, le=7)
+    division: str = Field(min_length=1, max_length=20)
+    turno: str = Field(pattern="^(manana|tarde|vespertino)$")
+    modalidad: str = ""
+    reemplazar: bool = False
+    bloques: list[BloqueLeido]
+
+
+class ImportacionCursosIn(BaseModel):
+    cursos: list[CursoImportIn]
+
+
+class ImportacionCursosOut(ImportacionOut):
+    divisiones_creadas: int
+    materias_creadas: int

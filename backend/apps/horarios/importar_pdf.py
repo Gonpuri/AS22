@@ -19,6 +19,7 @@ DIAS = {"lunes": 1, "lun": 1, "martes": 2, "mar": 2, "miercoles": 3, "mie": 3, "
 FRANJA = re.compile(r"(\d{1,2})\s*[:.hH]\s*(\d{2})\s*(?:hs\.?)?\s*(?:a|al|-|–|—|/)?\s*(\d{1,2})\s*[:.hH]\s*(\d{2})")
 SIN_CLASE = ("recreo", "receso", "almuerzo", "descanso", "break")
 UMBRAL_PARECIDO = 0.8
+UMBRAL_PARECIDO_ESTRICTO = 0.9
 
 
 class ErrorPdf(ValueError):
@@ -97,8 +98,9 @@ class Buscador:
     """Relaciona el texto de una celda con una materia de la división (sin tildes ni mayúsculas;
     acepta abreviaturas y diferencias leves)."""
 
-    def __init__(self, materias):
+    def __init__(self, materias, estricto=False):
         self.por_clave = {clave_texto(m.nombre): m for m in materias}
+        self.estricto = estricto  # sin prefijos: "Matemática" no es "Matemática Ciclo Superior"
 
     def buscar(self, texto: str):
         clave = clave_texto(texto)
@@ -106,10 +108,12 @@ class Buscador:
             return self.por_clave[clave]
         palabras = clave.split()
         candidatas = [m for c, m in self.por_clave.items()
-                      if c.startswith(clave) or clave.startswith(c) or _abreviatura(palabras, c.split())]
+                      if _abreviatura(palabras, c.split())
+                      or (not self.estricto and (c.startswith(clave) or clave.startswith(c)))]
         if len(candidatas) == 1:
             return candidatas[0]
-        parecida = difflib.get_close_matches(clave, self.por_clave, n=1, cutoff=UMBRAL_PARECIDO)
+        parecida = difflib.get_close_matches(
+            clave, self.por_clave, n=1, cutoff=UMBRAL_PARECIDO_ESTRICTO if self.estricto else UMBRAL_PARECIDO)
         return self.por_clave[parecida[0]] if parecida else None
 
 

@@ -9,6 +9,7 @@ const modulo: ModuloFrontend = {
     { path: 'grilla', etiqueta: 'Horario por curso', component: () => import('./views/Grilla.vue') },
     { path: 'bloques', etiqueta: 'Carga de horarios', component: () => import('./views/Bloques.vue') },
     { path: 'importar-pdf', etiqueta: 'Cargar horario desde PDF', component: () => import('./views/ImportarPdf.vue') },
+    { path: 'importar-pdf-cursos', etiqueta: 'Cargar cursos desde PDF escaneado', component: () => import('./views/ImportarPdfCursos.vue') },
   ],
 }
 

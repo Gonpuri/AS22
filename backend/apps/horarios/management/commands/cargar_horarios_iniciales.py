@@ -9,7 +9,7 @@ from django.db import transaction
 
 from apps.academico.models import Anio, Division, Materia
 from apps.horarios.models import BloqueHorario
-from apps.horarios.services import ErrorHorario, clave_texto, validar_bloque
+from apps.horarios.services import ErrorHorario, clave_division, clave_texto, validar_bloque
 
 ARCHIVO = Path(__file__).resolve().parents[2] / "datos" / "horarios_1er_anio_2026.json"
 
@@ -17,10 +17,7 @@ ARCHIVO = Path(__file__).resolve().parents[2] / "datos" / "horarios_1er_anio_202
 _clave = clave_texto
 
 
-def _clave_division(nombre: str) -> str:
-    """"2ª", "2°" y "2" son la misma división."""
-    numeros = re.findall(r"\d+", nombre)
-    return "".join(numeros) if numeros else _clave(nombre)
+_clave_division = clave_division
 
 
 def _hora(texto: str) -> time:

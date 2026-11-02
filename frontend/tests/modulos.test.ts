@@ -17,7 +17,7 @@ describe('registro de módulos', () => {
 
   it('horarios expone la grilla por curso, la carga de bloques y la carga desde PDF', () => {
     const horarios = modulos.find((m) => m.nombre === 'horarios')!
-    expect(horarios.rutas.map((r) => r.path)).toEqual(['grilla', 'bloques', 'importar-pdf'])
+    expect(horarios.rutas.map((r) => r.path)).toEqual(['grilla', 'bloques', 'importar-pdf', 'importar-pdf-cursos'])
   })
 
   it('consulta de docentes expone las clases por fecha', () => {

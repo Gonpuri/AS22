@@ -27,5 +27,7 @@ services:
         value: admin
       - key: ADMIN_PASSWORD
         sync: false # elegir una contraseña segura al crear el Blueprint
+      - key: ANTHROPIC_API_KEY # solo para cargar horarios desde PDF escaneado (lectura con IA)
+        sync: false
       - key: CORS_ALLOWED_ORIGINS
         sync: false # URL del frontend en Vercel, sin barra final
