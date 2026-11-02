@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 
 import dj_database_url
+from django.core.exceptions import ImproperlyConfigured
 
 from .cors import desde_entorno
 
@@ -66,12 +67,24 @@ TEMPLATES = [
     }
 ]
 
-DATABASES = {
-    "default": dj_database_url.config(
-        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
-        conn_max_age=600,
-    )
-}
+def _base_de_datos():
+    """Lee DATABASE_URL tolerando espacios y comillas de más (errores comunes al pegarla en Render) y,
+    si no se puede interpretar, falla diciendo qué mirar sin mostrar la contraseña."""
+    url = os.environ.get("DATABASE_URL", "").strip().strip("\"'").strip()
+    try:
+        return dj_database_url.parse(url, conn_max_age=600) if url else dj_database_url.parse(
+            f"sqlite:///{BASE_DIR / 'db.sqlite3'}", conn_max_age=600
+        )
+    except dj_database_url.ParseError as error:
+        esquema = url.split("://")[0] if "://" in url else "(sin «://»)"
+        raise ImproperlyConfigured(
+            f"DATABASE_URL no es una URL válida (empieza con {esquema!r}, tiene {len(url)} caracteres). "
+            "Debe ser postgresql://usuario:clave@host:puerto/base; si la clave tiene @ / : # o % hay que "
+            "codificarlos (@ = %40, / = %2F, : = %3A, # = %23, % = %25)."
+        ) from error
+
+
+DATABASES = {"default": _base_de_datos()}
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
