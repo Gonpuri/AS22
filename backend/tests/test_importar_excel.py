@@ -57,7 +57,8 @@ def test_propone_crear_y_actualizar_por_dni(admin_client):
 def test_reconoce_apellido_y_nombre_juntos_y_detecta_dni_repetido(admin_client):
     contenido = _xlsx([["Apellido y nombre", "DNI"], ["LOPEZ, MARIA ELENA", 20111222], ["OTRA, PERSONA", "20.111.222"]])
     filas = admin_client.post(PREVIA, {"archivo": _archivo(contenido)}, format="multipart").json()["filas"]
-    assert filas[0]["datos"]["apellido"] == "LOPEZ" and filas[0]["datos"]["nombre"] == "MARIA ELENA"
+    assert filas[0]["datos"]["apellido"] == "Lopez" and filas[0]["datos"]["nombre"] == "Maria Elena"
+    assert not filas[0]["revisar_nombre"]
     assert filas[1]["accion"] == "error" and "repetido en la fila 2" in filas[1]["errores"][0]
 
 
@@ -99,3 +100,30 @@ def test_guardar_es_todo_o_nada(admin_client):
 def test_solo_el_administrador_importa(common_client):
     assert common_client.post(GUARDAR, {"filas": []}, format="json").status_code == 403
     assert common_client.post(PREVIA, {"archivo": _archivo(_xlsx([ENCABEZADO]))}, format="multipart").status_code == 403
+
+
+def test_formulario_de_google_con_nombre_y_apellido_en_una_columna(admin_client):
+    """Formato del formulario real (datos inventados): «Nombre y Apellido» sin coma y en cualquier orden,
+    el correo ayuda a decidir, PAD «-» y CUIL sin guiones."""
+    Personal.objects.create(apellido="Ramos", nombre="Teodoro", dni="11222333")
+    contenido = _xlsx([
+        ["Marca temporal", "Nombre y Apellido", "DNI", "CUIL", "Email (abc)", "Teléfono celular",
+         "Fecha de nacimiento", "Fecha de ingreso a la Escuela", "PAD", "Antigüedad en la docencia"],
+        [date(2026, 11, 4), "Pedro gomez ", 10111222.0, 20101112229.0, "PGomez3@abc.gob.ar ", 2211234567.0,
+         date(1978, 2, 21), date(2022, 3, 1), None, "15 años"],
+        [date(2026, 11, 4), "Suarez Lucia", 10222333.0, 27102223334.0, "lusuarez@abc.gob.ar", 2217654321.0,
+         date(1983, 8, 23), date(2020, 3, 2), 235.0, "16 años"],
+        [date(2026, 11, 4), "Ana Duarte", 10333444.0, 27103334445.0, "aduarte@abc.gob.ar", None, None, None, "-", ""],
+        [date(2026, 11, 4), "Teodoro Ramos Gil", 11222333.0, None, "tramos@abc.gob.ar", None, None, None, None, ""],
+    ])
+    r = admin_client.post(PREVIA, {"archivo": _archivo(contenido)}, format="multipart")
+    assert r.status_code == 200
+    gomez, suarez, duarte, ramos = r.json()["filas"]
+    assert (gomez["accion"], gomez["datos"]["apellido"], gomez["datos"]["nombre"]) == ("crear", "Gomez", "Pedro")
+    assert gomez["datos"]["cuil"] == "20-10111222-9" and gomez["datos"]["email"] == "pgomez3@abc.gob.ar"
+    assert gomez["datos"]["telefono"] == "2211234567" and gomez["datos"]["fecha_ingreso"] == "2022-03-01"
+    assert (suarez["datos"]["apellido"], suarez["datos"]["nombre"], suarez["datos"]["pad"]) == ("Suarez", "Lucia", "235.000")
+    assert suarez["revisar_nombre"] is True  # apellido primero: se pide revisarlo
+    assert duarte["accion"] == "crear" and "pad" not in duarte["datos"]  # «-» es sin PAD
+    # una persona ya cargada conserva su nombre: la planilla solo aporta lo que falta
+    assert ramos["accion"] == "actualizar" and "apellido" not in ramos["datos"] and ramos["revisar_nombre"] is False

@@ -9,6 +9,7 @@ interface Fila {
   accion: 'crear' | 'actualizar' | 'error'
   errores: string[]
   cambios: string[]
+  revisar_nombre?: boolean
 }
 
 const abierto = defineModel<boolean>({ default: false })
@@ -32,6 +33,13 @@ const validas = computed(() => filas.value.filter((f) => f.accion !== 'error'))
 const conError = computed(() => filas.value.length - validas.value.length)
 const cuenta = (accion: Fila['accion']) => filas.value.filter((f) => f.accion === accion).length
 const nombre = (f: Fila) => [f.datos.apellido, f.datos.nombre].filter(Boolean).join(', ')
+/** Solo las personas nuevas traen nombre de la planilla; en las existentes se conserva el ya cargado. */
+const editable = (f: Fila) => f.accion === 'crear'
+const aRevisar = computed(() => filas.value.filter((f) => f.revisar_nombre).length)
+const sinNombre = computed(() => validas.value.some((f) => editable(f) && (!f.datos.apellido || !f.datos.nombre)))
+function invertir(f: Fila) {
+  ;[f.datos.apellido, f.datos.nombre] = [f.datos.nombre, f.datos.apellido]
+}
 const detalle = (f: Fila) =>
   f.accion === 'error'
     ? f.errores.join(' · ')
@@ -122,15 +130,33 @@ defineExpose({ leer, guardar })
             {{ cuenta('crear') }} nuevas · {{ cuenta('actualizar') }} existentes · {{ conError }} con error
             <span v-if="conError" class="text-medium-emphasis">(las filas con error no se guardan)</span>
           </p>
+          <v-alert v-if="aRevisar" type="warning" density="compact" class="mt-2" data-test="revisar">
+            {{ aRevisar }} nombres vienen en una sola columna y no se sabe con certeza cuál es el apellido:
+            revisá las filas resaltadas (podés corregir los campos o invertir con
+            <v-icon size="small">mdi-swap-horizontal</v-icon>).
+          </v-alert>
           <v-table density="compact" class="mt-2" data-test="propuesta">
             <thead>
-              <tr><th>Fila</th><th>DNI</th><th>Apellido y nombre</th><th>Estado</th><th>Detalle</th></tr>
+              <tr><th>Fila</th><th>DNI</th><th>Apellido</th><th>Nombre</th><th /><th>Estado</th><th>Detalle</th></tr>
             </thead>
             <tbody>
-              <tr v-for="f in filas" :key="f.fila">
+              <tr v-for="f in filas" :key="f.fila" :class="{ revisar: f.revisar_nombre }" data-test="fila">
                 <td>{{ f.fila }}</td>
                 <td>{{ f.dni }}</td>
-                <td>{{ nombre(f) }}</td>
+                <template v-if="editable(f)">
+                  <td style="min-width: 160px">
+                    <v-text-field v-model="f.datos.apellido" density="compact" hide-details single-line data-test="apellido" />
+                  </td>
+                  <td style="min-width: 160px">
+                    <v-text-field v-model="f.datos.nombre" density="compact" hide-details single-line data-test="nombre" />
+                  </td>
+                  <td>
+                    <v-btn icon="mdi-swap-horizontal" size="small" variant="text" title="Invertir apellido y nombre" data-test="invertir" @click="invertir(f)" />
+                  </td>
+                </template>
+                <template v-else>
+                  <td colspan="3">{{ f.accion === 'error' ? nombre(f) : '(se conserva el nombre cargado)' }}</td>
+                </template>
                 <td><v-chip size="small" :color="ACCIONES[f.accion][1]">{{ ACCIONES[f.accion][0] }}</v-chip></td>
                 <td>{{ detalle(f) }}</td>
               </tr>
@@ -144,7 +170,7 @@ defineExpose({ leer, guardar })
         <v-btn
           v-if="filas.length"
           color="primary"
-          :disabled="!validas.length || guardando"
+          :disabled="!validas.length || guardando || sinNombre"
           :loading="guardando"
           data-test="guardar"
           @click="guardar"
@@ -155,3 +181,9 @@ defineExpose({ leer, guardar })
     </v-card>
   </v-dialog>
 </template>
+
+<style scoped>
+.revisar {
+  background: rgba(var(--v-theme-warning), 0.15);
+}
+</style>

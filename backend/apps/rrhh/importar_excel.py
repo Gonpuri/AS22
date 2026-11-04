@@ -27,7 +27,7 @@ COLUMNAS = {
     "apellido": {"apellido", "apellidos"},
     "nombre": {"nombre", "nombres"},
     "apellido_nombre": {"apellido y nombre", "apellido y nombres", "apellidos y nombres", "apellidos y nombre",
-                        "nombre completo", "agente", "docente"},
+                        "nombre y apellido", "nombres y apellidos", "nombre completo", "agente", "docente"},
     "cuil": {"cuil", "cuit", "cuil cuit"},
     "fecha_nacimiento": {"fecha de nacimiento", "fecha nacimiento", "nacimiento", "fec nac", "f nacimiento"},
     "domicilio": {"domicilio", "direccion"},
@@ -50,8 +50,15 @@ def _clave(texto) -> str:
 
 
 def _campo_de(encabezado) -> str | None:
+    """Campo al que corresponde un encabezado: primero el nombre exacto y, si no, que empiece con alguno
+    ("Email (abc)", "Fecha de ingreso a la escuela")."""
     clave = _clave(encabezado)
-    return next((campo for campo, nombres in COLUMNAS.items() if clave in nombres), None)
+    if not clave:
+        return None
+    exacto = next((campo for campo, nombres in COLUMNAS.items() if clave in nombres), None)
+    return exacto or next(
+        (campo for campo, nombres in COLUMNAS.items() if any(clave.startswith(n + " ") for n in nombres)), None
+    )
 
 
 def _texto(valor) -> str:
@@ -85,7 +92,7 @@ def _fecha(valor) -> date | None:
 
 def _pad(valor) -> Decimal | None:
     texto = _texto(valor).replace(",", ".")
-    if not texto:
+    if not texto or not texto.strip("-–— "):  # vacío o "-": sin PAD
         return None
     try:
         return Decimal(texto).quantize(Decimal("0.001"))
@@ -93,11 +100,50 @@ def _pad(valor) -> Decimal | None:
         raise ValueError(f"PAD no numérico «{texto}»") from None
 
 
-def _separar_apellido_nombre(texto: str) -> tuple[str, str]:
+PARTICULAS = {"de", "del", "la", "las", "los", "y", "da", "do", "di"}
+
+
+def _propio(texto: str) -> str:
+    """"MARIA ELENA" / "maria elena" -> "Maria Elena". Lo que ya viene con mayúsculas y minúsculas mezcladas
+    se respeta tal cual."""
+    if texto != texto.upper() and texto != texto.lower():
+        return texto
+    return " ".join(p if i and p.lower() in PARTICULAS else p.capitalize() for i, p in enumerate(texto.lower().split()))
+
+
+def _cuil(texto: str) -> str:
+    """11 dígitos -> XX-XXXXXXXX-X; cualquier otra cosa se deja como vino."""
+    digitos = re.sub(r"\D", "", texto)
+    return f"{digitos[:2]}-{digitos[2:10]}-{digitos[10]}" if len(digitos) == 11 else texto
+
+
+def _separar_apellido_nombre(texto: str, email: str = "") -> tuple[str, str, bool]:
+    """(apellido, nombre, dudoso). «Apellido, Nombre» es inequívoco. Sin coma no se sabe si viene
+    «Nombre Apellido» o «Apellido Nombre» ni dónde corta cuando hay varias palabras: se elige la división
+    cuyo apellido aparece en el correo (casi siempre lo lleva) y, ante empate, la de nombre primero.
+    `dudoso` avisa cuando conviene revisarlo: más de dos palabras, apellido primero o ninguna pista en el correo."""
     if "," in texto:
         apellido, nombre = texto.split(",", 1)
-        return apellido.strip(), nombre.strip()
-    return texto, ""
+        return _propio(apellido.strip()), _propio(nombre.strip()), False
+    palabras = texto.split()
+    if len(palabras) < 2:
+        return _propio(texto), "", True
+    usuario = _clave(email.split("@")[0]).replace(" ", "")
+    def posiciones(grupo):
+        claves = [_clave(p).replace(" ", "") for p in grupo]
+        return [usuario.find(c) for c in claves if len(c) >= 3 and c in usuario]
+
+    candidatas = []  # (puntaje, nombre antes que apellido en el correo, apellido al final, apellido, nombre, hallados)
+    for i in range(1, len(palabras)):
+        for apellido_al_final in (True, False):
+            apellido = palabras[i:] if apellido_al_final else palabras[:i]
+            nombre = palabras[:i] if apellido_al_final else palabras[i:]
+            en_apellido, en_nombre = posiciones(apellido), posiciones(nombre)
+            orden = not (en_apellido and en_nombre) or max(en_nombre) < min(en_apellido)
+            candidatas.append((len(en_apellido) - 0.5 * (len(apellido) - len(en_apellido)), orden,
+                               apellido_al_final, apellido, nombre, len(en_apellido)))
+    _, _, al_final, apellido, nombre, hallados = max(candidatas, key=lambda c: c[:3])
+    return _propio(" ".join(apellido)), _propio(" ".join(nombre)), len(palabras) > 2 or not al_final or hallados == 0
 
 
 def _filas(contenido: bytes):
@@ -156,8 +202,18 @@ def _interpretar(numero, valores, columnas, vistos) -> dict:
     for campo in ("dni", "cuil", "domicilio", "telefono", "email", "apellido", "nombre"):
         if campo in crudo:
             datos[campo] = _dni(crudo[campo]) if campo == "dni" else _texto(crudo[campo])
+    if "cuil" in datos:
+        datos["cuil"] = _cuil(datos["cuil"])
+    if "email" in datos:
+        datos["email"] = datos["email"].lower()
+    for campo in ("apellido", "nombre"):
+        if campo in datos:
+            datos[campo] = _propio(datos[campo])
+    dudoso = False
     if "apellido_nombre" in crudo and _texto(crudo["apellido_nombre"]):
-        datos["apellido"], datos["nombre"] = _separar_apellido_nombre(_texto(crudo["apellido_nombre"]))
+        datos["apellido"], datos["nombre"], dudoso = _separar_apellido_nombre(
+            _texto(crudo["apellido_nombre"]), datos.get("email", "")
+        )
     dni = datos.get("dni", "")
     if not dni:
         errores.append("Falta el DNI.")
@@ -165,9 +221,15 @@ def _interpretar(numero, valores, columnas, vistos) -> dict:
         errores.append(f"El DNI está repetido en la fila {vistos[dni]}.")
     else:
         vistos[dni] = numero
-    fila = {"fila": numero, "datos": {k: v for k, v in datos.items() if v not in ("", None)}, "dni": dni}
+    fila = {"fila": numero, "datos": {k: str(v) if isinstance(v, Decimal) else v
+                                      for k, v in datos.items() if v not in ("", None)}, "dni": dni,
+            "revisar_nombre": dudoso}
 
     existente = Personal.objects.filter(dni=dni).first() if dni else None
+    if existente:  # el DNI identifica a la persona: su nombre ya cargado no se pisa con el de la planilla
+        fila["datos"].pop("apellido", None)
+        fila["datos"].pop("nombre", None)
+        fila["revisar_nombre"] = False
     if errores:
         return {**fila, "accion": "error", "errores": errores, "cambios": []}
     serializador = PersonalSerializer(existente, data=_para_serializador(fila["datos"]), partial=existente is not None)

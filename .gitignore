@@ -1,3 +1,6 @@
 .vscode/
 .idea/
 *.log
+
+# Planillas con datos personales usadas para pruebas manuales
+*.xlsx
