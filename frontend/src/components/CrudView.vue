@@ -112,7 +112,11 @@ defineExpose({ cargar })
     <div class="d-flex align-center mb-4">
       <h2 class="text-h5">{{ titulo }}</h2>
       <v-spacer />
-      <v-btn v-if="puedeEditar" color="primary" prepend-icon="mdi-plus" data-test="nuevo" @click="abrir(null)">Nuevo</v-btn>
+      <div v-if="puedeEditar" class="d-flex flex-column align-stretch ga-2">
+        <v-btn color="primary" prepend-icon="mdi-plus" data-test="nuevo" @click="abrir(null)">Nuevo</v-btn>
+        <!-- Acciones extra de cada pantalla (p. ej. "Carga Excel"), apiladas debajo de "Nuevo" -->
+        <slot name="acciones" />
+      </div>
     </div>
     <v-alert v-if="error && !dialogo" type="error" class="mb-4" closable @click:close="error = ''">{{ error }}</v-alert>
 
